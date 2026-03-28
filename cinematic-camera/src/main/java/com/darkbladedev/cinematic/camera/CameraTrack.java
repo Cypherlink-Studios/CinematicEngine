@@ -45,7 +45,7 @@ public final class CameraTrack implements Track {
     }
 
     private CameraState evaluateState(long tick) {
-        if (frames.size() == 1 || tick <= frames.getFirst().tick()) {
+        if (frames.size() == 1 || tick < frames.getFirst().tick()) {
             return toState(frames.getFirst());
         }
         if (tick >= frames.getLast().tick()) {
@@ -56,6 +56,9 @@ public final class CameraTrack implements Track {
             CameraFrame to = frames.get(index + 1);
             if (tick >= from.tick() && tick <= to.tick()) {
                 double segmentLength = (double) (to.tick() - from.tick());
+                if (segmentLength <= 0.0D) {
+                    return toState(to);
+                }
                 double progress = (tick - from.tick()) / segmentLength;
                 double easedProgress = to.interpolator().interpolate(progress);
                 Vector3d interpolatedPosition = new Vector3d(from.position()).lerp(to.position(), easedProgress);

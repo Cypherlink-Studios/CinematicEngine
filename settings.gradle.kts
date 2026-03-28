@@ -17,5 +17,6 @@ include(
     "cinematic-camera",
     "cinematic-actors",
     "cinematic-adapters",
-    "plugin-bootstrap"
+    "plugin-bootstrap",
+    "cinematic-testing"
 )
