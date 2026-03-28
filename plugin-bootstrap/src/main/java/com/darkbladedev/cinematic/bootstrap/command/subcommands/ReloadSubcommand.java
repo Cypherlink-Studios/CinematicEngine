@@ -1,20 +1,21 @@
 package com.darkbladedev.cinematic.bootstrap.command.subcommands;
 
+import com.darkbladedev.cinematic.bootstrap.CinematicActionResult;
+import com.darkbladedev.cinematic.bootstrap.CinematicService;
 import com.darkbladedev.cinematic.bootstrap.command.CinematicSubcommand;
 import com.darkbladedev.cinematic.bootstrap.command.CommandResult;
 import org.bukkit.command.CommandSender;
-import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.List;
 import java.util.Objects;
 import java.util.logging.Logger;
 
 public final class ReloadSubcommand implements CinematicSubcommand {
-    private final JavaPlugin plugin;
+    private final CinematicService cinematicService;
     private final Logger logger;
 
-    public ReloadSubcommand(JavaPlugin plugin, Logger logger) {
-        this.plugin = Objects.requireNonNull(plugin, "plugin");
+    public ReloadSubcommand(CinematicService cinematicService, Logger logger) {
+        this.cinematicService = Objects.requireNonNull(cinematicService, "cinematicService");
         this.logger = Objects.requireNonNull(logger, "logger");
     }
 
@@ -40,7 +41,7 @@ public final class ReloadSubcommand implements CinematicSubcommand {
 
     @Override
     public String description() {
-        return "Recarga la configuración del plugin.";
+        return "Recarga las cinemáticas del plugin.";
     }
 
     @Override
@@ -48,9 +49,9 @@ public final class ReloadSubcommand implements CinematicSubcommand {
         if (args.length != 0) {
             throw new IllegalArgumentException("Sintaxis inválida. Uso correcto: /cine reload");
         }
-        plugin.reloadConfig();
-        logger.info("Configuración recargada por " + sender.getName());
-        return CommandResult.success("Configuración recargada correctamente.");
+        CinematicActionResult result = cinematicService.reload();
+        logger.info("Recarga de cinemáticas solicitada por " + sender.getName());
+        return result.success() ? CommandResult.success(result.message()) : CommandResult.failure(result.message());
     }
 
     @Override

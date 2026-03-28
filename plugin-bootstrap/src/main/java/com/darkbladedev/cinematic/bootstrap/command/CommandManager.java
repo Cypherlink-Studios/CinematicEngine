@@ -45,7 +45,7 @@ public final class CommandManager implements CommandExecutor, TabCompleter {
         register(new PauseSubcommand(cinematicService, plugin.getLogger()));
         register(new ResumeSubcommand(cinematicService, plugin.getLogger()));
         register(new ListSubcommand(cinematicService));
-        register(new ReloadSubcommand(plugin, plugin.getLogger()));
+        register(new ReloadSubcommand(cinematicService, plugin.getLogger()));
         register(new HelpSubcommand(this));
     }
 

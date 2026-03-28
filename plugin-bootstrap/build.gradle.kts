@@ -9,6 +9,7 @@ dependencies {
     implementation(project(":cinematic-camera"))
     implementation(project(":cinematic-actors"))
     implementation(project(":cinematic-adapters"))
+    implementation(project(":cinematic-dsl"))
     compileOnly(libs.paper.api)
     compileOnly(libs.protocollib)
     testImplementation(libs.junit.jupiter)

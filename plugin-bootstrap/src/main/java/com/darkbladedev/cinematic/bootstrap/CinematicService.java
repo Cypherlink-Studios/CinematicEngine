@@ -13,6 +13,8 @@ public interface CinematicService {
 
     CinematicActionResult resume();
 
+    CinematicActionResult reload();
+
     boolean isRunning();
 
     boolean isPaused();

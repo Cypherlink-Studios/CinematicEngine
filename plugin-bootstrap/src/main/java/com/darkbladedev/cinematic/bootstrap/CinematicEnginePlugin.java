@@ -2,11 +2,21 @@ package com.darkbladedev.cinematic.bootstrap;
 
 import com.darkbladedev.cinematic.adapters.runtime.BukkitTickScheduler;
 import com.darkbladedev.cinematic.bootstrap.command.CommandManager;
+import com.darkbladedev.cinematic.dsl.mapper.DefaultDslComponents;
+import com.darkbladedev.cinematic.dsl.mapper.InterpolatorRegistry;
+import com.darkbladedev.cinematic.dsl.mapper.SceneMapper;
+import com.darkbladedev.cinematic.dsl.parser.SceneParser;
+import com.darkbladedev.cinematic.dsl.parser.SnakeYamlSceneParser;
+import com.darkbladedev.cinematic.dsl.registry.SceneLoader;
+import com.darkbladedev.cinematic.dsl.registry.TrackRegistry;
+import com.darkbladedev.cinematic.dsl.validator.SceneDtoValidator;
 import com.darkbladedev.cinematic.runtime.TimelinePlayer;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import java.nio.file.Path;
 
 public final class CinematicEnginePlugin extends JavaPlugin {
     private TimelinePlayer timelinePlayer;
@@ -18,7 +28,17 @@ public final class CinematicEnginePlugin extends JavaPlugin {
         timelinePlayer = new TimelinePlayer(new BukkitTickScheduler(this));
         timelinePlayer.start();
 
-        demoCinematicOrchestrator = new DemoCinematicOrchestrator(timelinePlayer, getLogger());
+        InterpolatorRegistry interpolatorRegistry = DefaultDslComponents.interpolatorRegistry();
+        TrackRegistry trackRegistry = DefaultDslComponents.trackRegistry(interpolatorRegistry);
+        SceneDtoValidator sceneDtoValidator = DefaultDslComponents.validator(trackRegistry, interpolatorRegistry);
+        SceneMapper sceneMapper = DefaultDslComponents.mapper(sceneDtoValidator, trackRegistry);
+        SceneParser sceneParser = new SnakeYamlSceneParser();
+        Path cinematicDirectory = getDataFolder().toPath().resolve("cinematics");
+        SceneLoader sceneLoader = new SceneLoader(cinematicDirectory, sceneParser, sceneMapper);
+        int loadedCinematics = sceneLoader.reloadAll();
+        getLogger().info("Cinemáticas cargadas: " + loadedCinematics);
+
+        demoCinematicOrchestrator = new DemoCinematicOrchestrator(timelinePlayer, sceneLoader, getLogger());
         for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
             demoCinematicOrchestrator.registerViewer(onlinePlayer);
         }

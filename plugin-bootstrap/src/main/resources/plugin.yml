@@ -17,8 +17,6 @@ permissions:
     default: true
   cinematic.play:
     default: op
-  cinematic.demo.play:
-    default: op
   cinematic.pause:
     default: op
   cinematic.resume:

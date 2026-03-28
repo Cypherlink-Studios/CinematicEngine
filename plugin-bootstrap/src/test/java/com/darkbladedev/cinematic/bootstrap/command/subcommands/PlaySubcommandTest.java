@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.logging.Logger;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -19,23 +18,9 @@ import static org.mockito.Mockito.when;
 
 class PlaySubcommandTest {
     @Test
-    void playDemoRequiresSpecificPermission() {
+    void playDelegatesToService() {
         CinematicService cinematicService = mock(CinematicService.class);
         CommandSender sender = mock(CommandSender.class);
-        when(sender.hasPermission("cinematic.demo.play")).thenReturn(false);
-        when(cinematicService.availableCinematics()).thenReturn(Set.of("demo"));
-        PlaySubcommand subcommand = new PlaySubcommand(cinematicService, Logger.getLogger("test"));
-
-        CommandResult result = subcommand.execute(sender, new String[]{"demo"});
-
-        assertFalse(result.success());
-    }
-
-    @Test
-    void playReturnsServiceResultWhenPermissionIsValid() {
-        CinematicService cinematicService = mock(CinematicService.class);
-        CommandSender sender = mock(CommandSender.class);
-        when(sender.hasPermission("cinematic.demo.play")).thenReturn(true);
         when(sender.getName()).thenReturn("Tester");
         when(cinematicService.play("demo")).thenReturn(CinematicActionResult.success("ok"));
         PlaySubcommand subcommand = new PlaySubcommand(cinematicService, Logger.getLogger("test"));

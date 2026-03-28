@@ -2,21 +2,14 @@ package com.darkbladedev.cinematic.bootstrap;
 
 import com.darkbladedev.cinematic.adapters.camera.PlayerCameraOutput;
 import com.darkbladedev.cinematic.adapters.runtime.ServiceTimelineContext;
-import com.darkbladedev.cinematic.camera.CameraFrame;
 import com.darkbladedev.cinematic.camera.CameraOutput;
-import com.darkbladedev.cinematic.camera.CameraTrack;
-import com.darkbladedev.cinematic.core.interpolation.EaseInOutInterpolator;
-import com.darkbladedev.cinematic.core.interpolation.LinearInterpolator;
 import com.darkbladedev.cinematic.core.model.Scene;
+import com.darkbladedev.cinematic.dsl.registry.SceneLoader;
 import com.darkbladedev.cinematic.runtime.TimelinePlayer;
 import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.World;
 import org.bukkit.entity.Player;
-import org.joml.Vector3d;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -26,16 +19,17 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Logger;
 
 public final class DemoCinematicOrchestrator implements CinematicService {
-    private static final String DEMO_NAME = "demo";
     private final TimelinePlayer timelinePlayer;
+    private final SceneLoader sceneLoader;
     private final Set<UUID> viewers;
     private final CameraOutput cameraOutput;
     private final Logger logger;
     private final ReentrantLock stateLock;
     private volatile ActiveCinematic activeCinematic;
 
-    public DemoCinematicOrchestrator(TimelinePlayer timelinePlayer, Logger logger) {
+    public DemoCinematicOrchestrator(TimelinePlayer timelinePlayer, SceneLoader sceneLoader, Logger logger) {
         this.timelinePlayer = Objects.requireNonNull(timelinePlayer, "timelinePlayer");
+        this.sceneLoader = Objects.requireNonNull(sceneLoader, "sceneLoader");
         this.logger = Objects.requireNonNull(logger, "logger");
         this.viewers = ConcurrentHashMap.newKeySet();
         this.cameraOutput = new PlayerCameraOutput(() -> activeViewers());
@@ -52,7 +46,7 @@ public final class DemoCinematicOrchestrator implements CinematicService {
 
     @Override
     public Set<String> availableCinematics() {
-        return Set.of(DEMO_NAME);
+        return sceneLoader.availableSceneIds();
     }
 
     @Override
@@ -60,20 +54,20 @@ public final class DemoCinematicOrchestrator implements CinematicService {
         stateLock.lock();
         try {
             refreshState();
-            if (!DEMO_NAME.equalsIgnoreCase(cinematicName)) {
+            Scene scene = sceneLoader.load(cinematicName).orElse(null);
+            if (scene == null) {
                 return CinematicActionResult.failure("La cinemática '" + cinematicName + "' no existe.");
             }
             if (activeCinematic != null) {
                 return CinematicActionResult.failure("Ya hay una cinemática en ejecución.");
             }
-            Scene demoScene = buildDemoScene();
             timelinePlayer.play(
-                    demoScene,
-                    (scene, localTick) -> new ServiceTimelineContext(localTick, Map.of(CameraOutput.class, cameraOutput))
+                    scene,
+                    (currentScene, localTick) -> new ServiceTimelineContext(localTick, Map.of(CameraOutput.class, cameraOutput))
             );
-            activeCinematic = new ActiveCinematic(DEMO_NAME, timelinePlayer.currentTick(), demoScene.durationTicks(), false);
-            logger.info("Se inició la cinemática demo.");
-            return CinematicActionResult.success("Cinemática demo iniciada.");
+            activeCinematic = new ActiveCinematic(cinematicName, timelinePlayer.currentTick(), scene.durationTicks(), false);
+            logger.info("Se inició la cinemática '" + cinematicName + "'.");
+            return CinematicActionResult.success("Cinemática '" + cinematicName + "' iniciada.");
         } finally {
             stateLock.unlock();
         }
@@ -138,6 +132,22 @@ public final class DemoCinematicOrchestrator implements CinematicService {
     }
 
     @Override
+    public CinematicActionResult reload() {
+        stateLock.lock();
+        try {
+            refreshState();
+            if (activeCinematic != null) {
+                return CinematicActionResult.failure("No se puede recargar mientras hay una cinemática activa.");
+            }
+            int loaded = sceneLoader.reloadAll();
+            logger.info("Se recargaron " + loaded + " cinemáticas del plugin.");
+            return CinematicActionResult.success("Recarga completada. Cinemáticas cargadas: " + loaded + ".");
+        } finally {
+            stateLock.unlock();
+        }
+    }
+
+    @Override
     public boolean isRunning() {
         stateLock.lock();
         try {
@@ -159,25 +169,8 @@ public final class DemoCinematicOrchestrator implements CinematicService {
         }
     }
 
-    private Scene buildDemoScene() {
-        World world = Bukkit.getWorlds().getFirst();
-        Location spawn = world.getSpawnLocation();
-        Vector3d start = new Vector3d(spawn.getX() + 2.0D, spawn.getY() + 2.5D, spawn.getZ() + 2.0D);
-        Vector3d middle = new Vector3d(spawn.getX() + 10.0D, spawn.getY() + 4.0D, spawn.getZ() + 2.0D);
-        Vector3d end = new Vector3d(spawn.getX() + 18.0D, spawn.getY() + 3.0D, spawn.getZ() - 4.0D);
-        CameraTrack track = new CameraTrack(
-                "demo_camera_track",
-                List.of(
-                        new CameraFrame(0L, start, 45.0F, 8.0F, 70.0F, new LinearInterpolator()),
-                        new CameraFrame(100L, middle, 120.0F, 0.0F, 75.0F, new LinearInterpolator()),
-                        new CameraFrame(200L, end, 180.0F, -6.0F, 80.0F, new EaseInOutInterpolator())
-                )
-        );
-        return new Scene("startup_demo_scene", 200L, List.of(track));
-    }
-
     private Iterable<Player> activeViewers() {
-        List<Player> players = new ArrayList<>();
+        java.util.List<Player> players = new ArrayList<>();
         for (UUID viewerId : viewers) {
             Player player = Bukkit.getPlayer(viewerId);
             if (player != null && player.isOnline() && !player.isDead()) {

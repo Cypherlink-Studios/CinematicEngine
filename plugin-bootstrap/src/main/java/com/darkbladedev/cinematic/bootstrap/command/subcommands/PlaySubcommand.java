@@ -50,9 +50,6 @@ public final class PlaySubcommand implements CinematicSubcommand {
             throw new IllegalArgumentException("Sintaxis inválida. Uso correcto: /cine play <nombre>");
         }
         String cinematicName = args[0];
-        if ("demo".equalsIgnoreCase(cinematicName) && !sender.hasPermission("cinematic.demo.play")) {
-            return CommandResult.failure("No tienes permiso para ejecutar la cinemática demo. Permiso: cinematic.demo.play");
-        }
         CinematicActionResult result = cinematicService.play(cinematicName);
         logger.info("Solicitud de play por " + sender.getName() + " para cinemática '" + cinematicName + "'");
         return result.success() ? CommandResult.success(result.message()) : CommandResult.failure(result.message());
