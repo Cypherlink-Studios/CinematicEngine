@@ -1,0 +1,29 @@
+name: CinematicEngine
+version: 1.0.0-SNAPSHOT
+main: com.darkbladedev.cinematic.bootstrap.CinematicEnginePlugin
+api-version: "1.20"
+softdepend:
+  - ProtocolLib
+commands:
+  cinematic:
+    description: Comando raíz del motor de cinemáticas
+    usage: /cine <subcomando>
+    aliases:
+      - cine
+permissions:
+  cinematic.help:
+    default: true
+  cinematic.list:
+    default: true
+  cinematic.play:
+    default: op
+  cinematic.demo.play:
+    default: op
+  cinematic.pause:
+    default: op
+  cinematic.resume:
+    default: op
+  cinematic.stop:
+    default: op
+  cinematic.reload:
+    default: op
