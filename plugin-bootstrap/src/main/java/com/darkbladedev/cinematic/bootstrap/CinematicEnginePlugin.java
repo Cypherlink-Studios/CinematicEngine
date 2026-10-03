@@ -1,5 +1,7 @@
 package com.darkbladedev.cinematic.bootstrap;
 
+import com.darkbladedev.cinematic.adapters.camera.CameraRigManager;
+import com.darkbladedev.cinematic.adapters.camera.SpectatorSafetyListener;
 import com.darkbladedev.cinematic.adapters.runtime.BukkitTickScheduler;
 import com.darkbladedev.cinematic.bootstrap.command.CommandManager;
 import com.darkbladedev.cinematic.dsl.mapper.DefaultDslComponents;
@@ -38,10 +40,12 @@ public final class CinematicEnginePlugin extends JavaPlugin {
         int loadedCinematics = sceneLoader.reloadAll();
         getLogger().info("Cinemáticas cargadas: " + loadedCinematics);
 
-        demoCinematicOrchestrator = new DemoCinematicOrchestrator(timelinePlayer, sceneLoader, getLogger());
+        CameraRigManager cameraRigManager = new CameraRigManager(this);
+        demoCinematicOrchestrator = new DemoCinematicOrchestrator(timelinePlayer, sceneLoader, getLogger(), cameraRigManager);
         for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
             demoCinematicOrchestrator.registerViewer(onlinePlayer);
         }
+        getServer().getPluginManager().registerEvents(new SpectatorSafetyListener(cameraRigManager), this);
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(demoCinematicOrchestrator), this);
         getServer().getPluginManager().registerEvents(new PlayerQuitListener(demoCinematicOrchestrator), this);
 
@@ -57,6 +61,9 @@ public final class CinematicEnginePlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (demoCinematicOrchestrator != null) {
+            demoCinematicOrchestrator.cleanup();
+        }
         if (timelinePlayer != null) {
             timelinePlayer.stop();
         }

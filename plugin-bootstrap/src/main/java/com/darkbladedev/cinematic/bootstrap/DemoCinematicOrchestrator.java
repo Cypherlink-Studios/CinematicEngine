@@ -1,5 +1,6 @@
 package com.darkbladedev.cinematic.bootstrap;
 
+import com.darkbladedev.cinematic.adapters.camera.CameraRigManager;
 import com.darkbladedev.cinematic.adapters.camera.PlayerCameraOutput;
 import com.darkbladedev.cinematic.adapters.runtime.ServiceTimelineContext;
 import com.darkbladedev.cinematic.camera.CameraOutput;
@@ -12,6 +13,7 @@ import org.bukkit.entity.Player;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,15 +27,25 @@ public final class DemoCinematicOrchestrator implements CinematicService {
     private final CameraOutput cameraOutput;
     private final Logger logger;
     private final ReentrantLock stateLock;
+    private final CameraRigManager rigManager;
     private volatile ActiveCinematic activeCinematic;
 
     public DemoCinematicOrchestrator(TimelinePlayer timelinePlayer, SceneLoader sceneLoader, Logger logger) {
+        this(timelinePlayer, sceneLoader, logger, null);
+    }
+
+    public DemoCinematicOrchestrator(TimelinePlayer timelinePlayer, SceneLoader sceneLoader, Logger logger, CameraRigManager rigManager) {
         this.timelinePlayer = Objects.requireNonNull(timelinePlayer, "timelinePlayer");
         this.sceneLoader = Objects.requireNonNull(sceneLoader, "sceneLoader");
         this.logger = Objects.requireNonNull(logger, "logger");
+        this.rigManager = rigManager;
         this.viewers = ConcurrentHashMap.newKeySet();
-        this.cameraOutput = new PlayerCameraOutput(() -> activeViewers());
+        this.cameraOutput = new PlayerCameraOutput(() -> activeViewers(), rigManager);
         this.stateLock = new ReentrantLock();
+    }
+
+    public Optional<CameraRigManager> rigManager() {
+        return Optional.ofNullable(rigManager);
     }
 
     public void registerViewer(Player player) {
@@ -42,6 +54,9 @@ public final class DemoCinematicOrchestrator implements CinematicService {
 
     public void unregisterViewer(Player player) {
         viewers.remove(player.getUniqueId());
+        if (rigManager != null) {
+            rigManager.endSession(player.getUniqueId());
+        }
     }
 
     @Override
@@ -84,6 +99,9 @@ public final class DemoCinematicOrchestrator implements CinematicService {
             timelinePlayer.clearActiveScenes();
             timelinePlayer.resume();
             activeCinematic = null;
+            if (rigManager != null) {
+                rigManager.endAllSessions();
+            }
             logger.info("Se detuvo la cinemática activa.");
             return CinematicActionResult.success("Cinemática detenida.");
         } finally {
@@ -189,6 +207,24 @@ public final class DemoCinematicOrchestrator implements CinematicService {
         if (finishedByTime || !timelinePlayer.hasActiveScenes()) {
             activeCinematic = null;
             timelinePlayer.resume();
+            if (rigManager != null) {
+                rigManager.endAllSessions();
+            }
+        }
+    }
+
+    public void cleanup() {
+        stateLock.lock();
+        try {
+            if (activeCinematic != null) {
+                timelinePlayer.clearActiveScenes();
+                activeCinematic = null;
+            }
+            if (rigManager != null) {
+                rigManager.endAllSessions();
+            }
+        } finally {
+            stateLock.unlock();
         }
     }
 
