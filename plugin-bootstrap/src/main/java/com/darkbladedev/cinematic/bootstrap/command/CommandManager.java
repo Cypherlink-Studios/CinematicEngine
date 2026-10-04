@@ -8,6 +8,7 @@ import com.darkbladedev.cinematic.bootstrap.command.subcommands.PlaySubcommand;
 import com.darkbladedev.cinematic.bootstrap.command.subcommands.ReloadSubcommand;
 import com.darkbladedev.cinematic.bootstrap.command.subcommands.ResumeSubcommand;
 import com.darkbladedev.cinematic.bootstrap.command.subcommands.StopSubcommand;
+import com.darkbladedev.cinematic.bootstrap.i18n.MessageService;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -29,24 +30,30 @@ import java.util.logging.Level;
 public final class CommandManager implements CommandExecutor, TabCompleter {
     private final JavaPlugin plugin;
     private final CinematicService cinematicService;
+    private final MessageService messageService;
     private final Map<String, CinematicSubcommand> commandLookup;
     private final Map<String, CinematicSubcommand> commandByName;
 
     public CommandManager(JavaPlugin plugin, CinematicService cinematicService) {
+        this(plugin, cinematicService, null);
+    }
+
+    public CommandManager(JavaPlugin plugin, CinematicService cinematicService, MessageService messageService) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
         this.cinematicService = Objects.requireNonNull(cinematicService, "cinematicService");
+        this.messageService = messageService;
         this.commandLookup = new ConcurrentHashMap<>();
         this.commandByName = new LinkedHashMap<>();
     }
 
     public void registerDefaults() {
-        register(new PlaySubcommand(cinematicService, plugin.getLogger()));
-        register(new StopSubcommand(cinematicService, plugin.getLogger()));
-        register(new PauseSubcommand(cinematicService, plugin.getLogger()));
-        register(new ResumeSubcommand(cinematicService, plugin.getLogger()));
-        register(new ListSubcommand(cinematicService));
-        register(new ReloadSubcommand(cinematicService, plugin.getLogger()));
-        register(new HelpSubcommand(this));
+        register(new PlaySubcommand(cinematicService, messageService, plugin.getLogger()));
+        register(new StopSubcommand(cinematicService, messageService, plugin.getLogger()));
+        register(new PauseSubcommand(cinematicService, messageService, plugin.getLogger()));
+        register(new ResumeSubcommand(cinematicService, messageService, plugin.getLogger()));
+        register(new ListSubcommand(cinematicService, messageService));
+        register(new ReloadSubcommand(cinematicService, messageService, plugin.getLogger()));
+        register(new HelpSubcommand(this, messageService));
     }
 
     public void register(CinematicSubcommand subcommand) {
@@ -68,24 +75,41 @@ public final class CommandManager implements CommandExecutor, TabCompleter {
             }
             CinematicSubcommand subcommand = find(args[0]);
             if (subcommand == null) {
-                sender.sendMessage("Subcomando desconocido: " + args[0]);
-                sender.sendMessage("Usa /" + label + " help para ver los comandos disponibles.");
+                if (messageService != null) {
+                    messageService.send(sender, "command.error.unknown_subcommand", Map.of("subcommand", args[0]));
+                    messageService.send(sender, "command.help.hint", Map.of("label", label));
+                } else {
+                    sender.sendMessage("Subcomando desconocido: " + args[0]);
+                    sender.sendMessage("Usa /" + label + " help para ver los comandos disponibles.");
+                }
                 return true;
             }
             if (!hasPermission(sender, subcommand.permission())) {
-                sender.sendMessage("No tienes permiso para usar este comando. Permiso: " + subcommand.permission());
+                if (messageService != null) {
+                    messageService.send(sender, "command.error.no_permission", Map.of("permission", subcommand.permission()));
+                } else {
+                    sender.sendMessage("No tienes permiso para usar este comando. Permiso: " + subcommand.permission());
+                }
                 return true;
             }
             String[] subArgs = trimFirst(args);
             CommandResult result = subcommand.execute(sender, subArgs);
-            sender.sendMessage(result.message());
+            if (messageService != null && result.messageKey() != null) {
+                messageService.send(sender, result.messageKey(), result.placeholders());
+            } else if (result.message() != null) {
+                sender.sendMessage(result.message());
+            }
             return true;
         } catch (IllegalArgumentException exception) {
             sender.sendMessage(exception.getMessage());
             return true;
         } catch (Exception exception) {
             plugin.getLogger().log(Level.SEVERE, "Error ejecutando comando cinematic", exception);
-            sender.sendMessage("Ocurrió un error interno al ejecutar el comando.");
+            if (messageService != null) {
+                messageService.send(sender, "command.error.internal_error");
+            } else {
+                sender.sendMessage("Ocurrió un error interno al ejecutar el comando.");
+            }
             return true;
         }
     }
@@ -115,28 +139,69 @@ public final class CommandManager implements CommandExecutor, TabCompleter {
     }
 
     public void sendGeneralHelp(CommandSender sender) {
-        sender.sendMessage("Comandos disponibles:");
-        for (CinematicSubcommand subcommand : sortedSubcommands()) {
-            if (!hasPermission(sender, subcommand.permission())) {
-                continue;
+        if (messageService != null) {
+            messageService.send(sender, "command.help.header");
+            String lang = messageService.resolveLanguage(sender);
+            for (CinematicSubcommand subcommand : sortedSubcommands()) {
+                if (!hasPermission(sender, subcommand.permission())) {
+                    continue;
+                }
+                String desc = subcommand.description();
+                String descKey = "command.subcommand." + subcommand.name() + ".description";
+                String rawDesc = messageService.resolveRaw(lang, descKey);
+                if (!rawDesc.startsWith("<red>[Missing translation")) {
+                    desc = rawDesc;
+                }
+                messageService.send(sender, "command.help.format", Map.of(
+                        "usage", subcommand.usage(),
+                        "description", desc
+                ));
             }
-            sender.sendMessage("/cine " + subcommand.usage() + " - " + subcommand.description());
+        } else {
+            sender.sendMessage("Comandos disponibles:");
+            for (CinematicSubcommand subcommand : sortedSubcommands()) {
+                if (!hasPermission(sender, subcommand.permission())) {
+                    continue;
+                }
+                sender.sendMessage("/cine " + subcommand.usage() + " - " + subcommand.description());
+            }
         }
     }
 
     public void sendSubcommandHelp(CommandSender sender, String commandName) {
         CinematicSubcommand subcommand = find(commandName);
         if (subcommand == null) {
-            sender.sendMessage("No existe ayuda para '" + commandName + "'.");
+            if (messageService != null) {
+                messageService.send(sender, "command.help.not_found", Map.of("subcommand", commandName));
+            } else {
+                sender.sendMessage("No existe ayuda para '" + commandName + "'.");
+            }
             return;
         }
         if (!hasPermission(sender, subcommand.permission())) {
-            sender.sendMessage("No tienes permiso para ver esta ayuda.");
+            if (messageService != null) {
+                messageService.send(sender, "command.help.no_permission");
+            } else {
+                sender.sendMessage("No tienes permiso para ver esta ayuda.");
+            }
             return;
         }
-        sender.sendMessage("Uso: /cine " + subcommand.usage());
-        sender.sendMessage("Descripción: " + subcommand.description());
-        sender.sendMessage("Permiso: " + subcommand.permission());
+        if (messageService != null) {
+            String lang = messageService.resolveLanguage(sender);
+            String desc = subcommand.description();
+            String descKey = "command.subcommand." + subcommand.name() + ".description";
+            String rawDesc = messageService.resolveRaw(lang, descKey);
+            if (!rawDesc.startsWith("<red>[Missing translation")) {
+                desc = rawDesc;
+            }
+            messageService.send(sender, "command.help.detail.usage", Map.of("usage", subcommand.usage()));
+            messageService.send(sender, "command.help.detail.description", Map.of("description", desc));
+            messageService.send(sender, "command.help.detail.permission", Map.of("permission", subcommand.permission()));
+        } else {
+            sender.sendMessage("Uso: /cine " + subcommand.usage());
+            sender.sendMessage("Descripción: " + subcommand.description());
+            sender.sendMessage("Permiso: " + subcommand.permission());
+        }
     }
 
     private List<String> availableSubcommandNames(CommandSender sender) {

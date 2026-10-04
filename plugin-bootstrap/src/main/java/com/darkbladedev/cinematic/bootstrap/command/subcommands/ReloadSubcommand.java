@@ -4,6 +4,7 @@ import com.darkbladedev.cinematic.bootstrap.CinematicActionResult;
 import com.darkbladedev.cinematic.bootstrap.CinematicService;
 import com.darkbladedev.cinematic.bootstrap.command.CinematicSubcommand;
 import com.darkbladedev.cinematic.bootstrap.command.CommandResult;
+import com.darkbladedev.cinematic.bootstrap.i18n.MessageService;
 import org.bukkit.command.CommandSender;
 
 import java.util.List;
@@ -12,10 +13,16 @@ import java.util.logging.Logger;
 
 public final class ReloadSubcommand implements CinematicSubcommand {
     private final CinematicService cinematicService;
+    private final MessageService messageService;
     private final Logger logger;
 
     public ReloadSubcommand(CinematicService cinematicService, Logger logger) {
+        this(cinematicService, null, logger);
+    }
+
+    public ReloadSubcommand(CinematicService cinematicService, MessageService messageService, Logger logger) {
         this.cinematicService = Objects.requireNonNull(cinematicService, "cinematicService");
+        this.messageService = messageService;
         this.logger = Objects.requireNonNull(logger, "logger");
     }
 
@@ -50,7 +57,15 @@ public final class ReloadSubcommand implements CinematicSubcommand {
             throw new IllegalArgumentException("Sintaxis inválida. Uso correcto: /cine reload");
         }
         CinematicActionResult result = cinematicService.reload();
+        if (result.success() && messageService != null) {
+            messageService.reload();
+        }
         logger.info("Recarga de cinemáticas solicitada por " + sender.getName());
+        if (result.messageKey() != null) {
+            return result.success()
+                    ? CommandResult.successKey(result.messageKey(), result.placeholders(), result.message())
+                    : CommandResult.failureKey(result.messageKey(), result.placeholders(), result.message());
+        }
         return result.success() ? CommandResult.success(result.message()) : CommandResult.failure(result.message());
     }
 

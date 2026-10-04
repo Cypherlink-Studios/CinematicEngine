@@ -1,0 +1,64 @@
+prefix: "<gray>[<gold>CinematicEngine<gray>]</gold></gray> "
+
+command:
+  error:
+    unknown_subcommand: "<red>Unknown subcommand: <yellow><subcommand></yellow>.</red>"
+    no_permission: "<red>You do not have permission to use this command. Permission: <yellow><permission></yellow></red>"
+    internal_error: "<red>An internal error occurred while executing the command.</red>"
+    invalid_syntax: "<red>Invalid syntax. Correct usage: <yellow>/<label> <usage></yellow></red>"
+  help:
+    hint: "<gray>Use <yellow>/<label> help</yellow> to view available commands.</gray>"
+    header: "<gold>Available commands:</gold>"
+    format: "<yellow>/cine <usage></yellow> <dark_gray>-</dark_gray> <gray><description></gray>"
+    not_found: "<red>No help found for '<yellow><subcommand></yellow>'.</red>"
+    no_permission: "<red>You do not have permission to view this help.</red>"
+    detail:
+      usage: "<gray>Usage: <yellow>/cine <usage></yellow></gray>"
+      description: "<gray>Description: <white><description></white></gray>"
+      permission: "<gray>Permission: <aqua><permission></aqua></gray>"
+  subcommand:
+    help:
+      description: "Shows general or detailed help for a subcommand."
+      usage: "help [subcommand]"
+      success_general: "<green>Help displayed.</green>"
+      success_detail: "<green>Subcommand help displayed.</green>"
+    list:
+      description: "Displays all available cinematics."
+      usage: "list"
+      empty: "<yellow>No cinematics available.</yellow>"
+      success: "<gray>Available cinematics: <yellow><cinematics></yellow></gray>"
+    play:
+      description: "Plays a cinematic by name."
+      usage: "play <name>"
+    pause:
+      description: "Pauses the active cinematic."
+      usage: "pause"
+    resume:
+      description: "Resumes a paused cinematic."
+      usage: "resume"
+    stop:
+      description: "Stops the active cinematic."
+      usage: "stop"
+    reload:
+      description: "Reloads plugin cinematics."
+      usage: "reload"
+
+cinematic:
+  play:
+    not_found: "<red>Cinematic '<yellow><name></yellow>' does not exist.</red>"
+    already_running: "<red>A cinematic is already running.</red>"
+    started: "<green>Cinematic '<yellow><name></yellow>' started.</green>"
+  stop:
+    not_running: "<red>No cinematic is currently running.</red>"
+    stopped: "<green>Cinematic stopped.</green>"
+  pause:
+    not_running: "<red>No cinematic is currently running to pause.</red>"
+    already_paused: "<yellow>The cinematic is already paused.</yellow>"
+    paused: "<green>Cinematic paused.</green>"
+  resume:
+    not_running: "<red>No cinematic is currently running to resume.</red>"
+    not_paused: "<yellow>The cinematic is not paused.</yellow>"
+    resumed: "<green>Cinematic resumed.</green>"
+  reload:
+    active_running: "<red>Cannot reload while a cinematic is active.</red>"
+    success: "<green>Reload complete. Loaded cinematics: <white><count></white>.</green>"

@@ -28,6 +28,14 @@ folia:
 
 # Versiones publicadas
 versions:
+  - version: "1.2.0"
+    releaseDate: "2026-10-04"
+    reference: "main"
+    downloadUrl: https://github.com/Cypherlink-Studios/CinematicEngine/releases
+    changelog: Sistema integral de internacionalización (i18n) con Adventure MiniMessage, paquetes YAML externos (messages_es.yml, messages_en.yml), resolución según idioma del cliente de cada jugador o servidor y recarga en caliente con /cine reload.
+    minecraft:
+      - "1.20.x"
+      - "1.21.x"
   - version: "1.1.0"
     releaseDate: "2026-10-04"
     reference: "cbdf52a"

@@ -3,6 +3,7 @@ package com.darkbladedev.cinematic.bootstrap.command.subcommands;
 import com.darkbladedev.cinematic.bootstrap.command.CinematicSubcommand;
 import com.darkbladedev.cinematic.bootstrap.command.CommandManager;
 import com.darkbladedev.cinematic.bootstrap.command.CommandResult;
+import com.darkbladedev.cinematic.bootstrap.i18n.MessageService;
 import org.bukkit.command.CommandSender;
 
 import java.util.List;
@@ -10,9 +11,15 @@ import java.util.Objects;
 
 public final class HelpSubcommand implements CinematicSubcommand {
     private final CommandManager commandManager;
+    private final MessageService messageService;
 
     public HelpSubcommand(CommandManager commandManager) {
+        this(commandManager, null);
+    }
+
+    public HelpSubcommand(CommandManager commandManager, MessageService messageService) {
         this.commandManager = Objects.requireNonNull(commandManager, "commandManager");
+        this.messageService = messageService;
     }
 
     @Override
@@ -44,11 +51,11 @@ public final class HelpSubcommand implements CinematicSubcommand {
     public CommandResult execute(CommandSender sender, String[] args) {
         if (args.length == 0) {
             commandManager.sendGeneralHelp(sender);
-            return CommandResult.success("Ayuda mostrada.");
+            return CommandResult.successKey("command.subcommand.help.success_general", "Ayuda mostrada.");
         }
         if (args.length == 1) {
             commandManager.sendSubcommandHelp(sender, args[0]);
-            return CommandResult.success("Ayuda de subcomando mostrada.");
+            return CommandResult.successKey("command.subcommand.help.success_detail", "Ayuda de subcomando mostrada.");
         }
         throw new IllegalArgumentException("Sintaxis inválida. Uso correcto: /cine help [subcomando]");
     }

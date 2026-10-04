@@ -37,6 +37,9 @@ Esta guía te acompañará paso a paso en la instalación de **CinematicEngine**
      ```bash
      plugins/CinematicEngine/
      ├── config.yml
+     ├── locales/
+     │   ├── messages_es.yml
+     │   └── messages_en.yml
      └── scenes/
      ```
 
@@ -46,6 +49,25 @@ Esta guía te acompañará paso a paso en la instalación de **CinematicEngine**
      /cine help
      ```
    - Si la instalación fue exitosa, verás el listado de subcomandos disponibles.
+
+---
+
+## 🌐 Configuración de Idioma e Internacionalización (i18n)
+
+CinematicEngine integra un sistema de localización completo con soporte para **Adventure MiniMessage** y archivos de traducción YAML externos:
+
+```yaml
+locale:
+  # Idioma por defecto del servidor (es, en)
+  default: "es"
+  # Si está activado, detecta el idioma del cliente de cada jugador
+  per-player: true
+```
+
+- **Paquetes externos (`locales/`)**: Los mensajes del plugin se extraen automáticamente en `locales/messages_es.yml` y `locales/messages_en.yml`. Puedes modificarlos o añadir nuevos idiomas (`messages_<codigo>.yml`).
+- **Detección por jugador (`per-player: true`)**: Los jugadores reciben los mensajes en el idioma configurado en su cliente de Minecraft (ej. `es_es`, `en_us`), recurriendo al idioma por defecto del servidor ante claves no traducidas.
+- **Formato MiniMessage**: Soporta gradientes, colores hex, decoraciones y etiquetas interactivas de Adventure (como `<gold>`, `<bold>`, `<hover:...>`).
+- **Recarga en caliente**: Cualquier cambio en los archivos de idioma se aplica al instante con `/cine reload`.
 
 ---
 

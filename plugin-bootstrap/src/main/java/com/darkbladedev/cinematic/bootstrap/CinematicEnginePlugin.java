@@ -65,7 +65,13 @@ public final class CinematicEnginePlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(demoCinematicOrchestrator), this);
         getServer().getPluginManager().registerEvents(new PlayerQuitListener(demoCinematicOrchestrator), this);
 
-        commandManager = new CommandManager(this, demoCinematicOrchestrator);
+        Path localesDirectory = getDataFolder().toPath().resolve("locales");
+        String defaultLanguage = getConfig().getString("locale.default", "es");
+        boolean perPlayerLocale = getConfig().getBoolean("locale.per-player", true);
+        com.darkbladedev.cinematic.bootstrap.i18n.MessageService messageService =
+                new com.darkbladedev.cinematic.bootstrap.i18n.DefaultMessageService(localesDirectory, defaultLanguage, perPlayerLocale, getLogger());
+
+        commandManager = new CommandManager(this, demoCinematicOrchestrator, messageService);
         commandManager.registerDefaults();
         PluginCommand cinematicCommand = getCommand("cinematic");
         if (cinematicCommand == null) {

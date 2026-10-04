@@ -37,6 +37,9 @@ This guide will walk you through installing **CinematicEngine**, configuring nec
      ```bash
      plugins/CinematicEngine/
      ├── config.yml
+     ├── locales/
+     │   ├── messages_es.yml
+     │   └── messages_en.yml
      └── scenes/
      ```
 
@@ -46,6 +49,25 @@ This guide will walk you through installing **CinematicEngine**, configuring nec
      /cine help
      ```
    - If installed correctly, you will see the full list of available CinematicEngine commands.
+
+---
+
+## 🌐 Localization & Language Configuration (i18n)
+
+CinematicEngine includes a comprehensive localization subsystem powered by **Adventure MiniMessage** and external YAML translation files:
+
+```yaml
+locale:
+  # Server default language code (es, en)
+  default: "es"
+  # When true, automatically detects each connected player's client language
+  per-player: true
+```
+
+- **External Bundles (`locales/`)**: Plugin messages are automatically extracted into `locales/messages_es.yml` and `locales/messages_en.yml`. You can customize existing strings or add custom languages (`messages_<lang>.yml`).
+- **Per-Player Locale Detection (`per-player: true`)**: Players receive command feedback and notices matching their client settings (e.g. `en_us`, `es_es`), falling back to the server default for any missing keys.
+- **MiniMessage Formatting**: Fully supports hex colors, gradients, click/hover actions, and Adventure decorations (e.g., `<gold>`, `<bold>`, `<hover:...>`).
+- **Hot Reload**: Modify locale files and apply your changes immediately in-game using `/cine reload`.
 
 ---
 

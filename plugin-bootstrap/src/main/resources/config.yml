@@ -8,3 +8,10 @@ camera:
   #                 Mounts viewers without spawning server entities. Highly recommended.
   # SERVER_DISPLAY: Server-side Display Entity rig for long-distance cross-chunk streaming.
   mount-mode: PACKET_VIRTUAL
+
+# Localization settings
+locale:
+  # Default language for console and fallback (e.g. es, en)
+  default: "es"
+  # Whether to resolve messages according to each player's client language
+  per-player: true

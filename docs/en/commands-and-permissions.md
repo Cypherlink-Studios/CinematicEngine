@@ -7,7 +7,7 @@ sidebar:
 
 # Commands and Permissions
 
-CinematicEngine provides an intuitive, robust command structure managed by `CommandManager`. All subcommands feature smart contextual tab-completion and detailed feedback messages.
+CinematicEngine provides an intuitive, robust command structure managed by `CommandManager`. All subcommands feature smart contextual tab-completion, multilingual support (i18n), and rich feedback messages rendered via **Adventure MiniMessage**.
 
 ---
 
@@ -87,7 +87,7 @@ Displays a list of all currently registered and validated cinematic scenes along
 ---
 
 ### 6. `/cine reload`
-Reloads all scene YAML files from disk and refreshes internal registries without requiring a server reboot. Validates each scene against `SceneDtoValidator` and logs any parsing errors to the console.
+Reloads all scene YAML files and language bundles (`locales/messages_*.yml`) from disk, updating internal registries and active translations without requiring a server reboot. Validates each scene against `SceneDtoValidator` and logs any parsing errors to the console.
 
 - **Permission**: `cinematic.reload` (Default: `op`)
 - **Example**:
@@ -105,6 +105,16 @@ Prints the help menu with available subcommands, argument descriptions, and synt
   ```text
   /cine help
   ```
+
+---
+
+## 🎨 Formatting and Localization (i18n)
+
+All command responses, error notices, and operational status messages are processed through the internationalization service (`MessageService`) using **Adventure MiniMessage**:
+
+- **Dynamic Placeholders**: Messages support contextual replacements such as `<subcommand>`, `<label>`, `<permission>`, `<name>`, and `<count>`.
+- **Rich Visual Styling**: Full support for RGB/hex colors (`<#55ffff>`), gradients (`<gradient:#ffaa00:#ff5555>`), and text decorations like `<bold>` or `<italic>`.
+- **Complete Customization**: Modify any translation strings or visual themes inside `plugins/CinematicEngine/locales/` and hot-reload them via `/cine reload`.
 
 ---
 

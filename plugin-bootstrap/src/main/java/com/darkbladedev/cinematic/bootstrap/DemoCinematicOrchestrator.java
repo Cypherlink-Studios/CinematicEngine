@@ -112,10 +112,10 @@ public final class DemoCinematicOrchestrator implements CinematicService {
             refreshState();
             Scene scene = sceneLoader.load(cinematicName).orElse(null);
             if (scene == null) {
-                return CinematicActionResult.failure("La cinemática '" + cinematicName + "' no existe.");
+                return CinematicActionResult.failureKey("cinematic.play.not_found", Map.of("name", cinematicName), "La cinemática '" + cinematicName + "' no existe.");
             }
             if (activeCinematic != null) {
-                return CinematicActionResult.failure("Ya hay una cinemática en ejecución.");
+                return CinematicActionResult.failureKey("cinematic.play.already_running", "Ya hay una cinemática en ejecución.");
             }
 
             SceneDTO dto = sceneLoader.loadDto(cinematicName).orElse(null);
@@ -138,7 +138,7 @@ public final class DemoCinematicOrchestrator implements CinematicService {
             );
             activeCinematic = new ActiveCinematic(cinematicName, timelinePlayer.currentTick(), scene.durationTicks(), false);
             logger.info("Se inició la cinemática '" + cinematicName + "'.");
-            return CinematicActionResult.success("Cinemática '" + cinematicName + "' iniciada.");
+            return CinematicActionResult.successKey("cinematic.play.started", Map.of("name", cinematicName), "Cinemática '" + cinematicName + "' iniciada.");
         } finally {
             stateLock.unlock();
         }
@@ -150,7 +150,7 @@ public final class DemoCinematicOrchestrator implements CinematicService {
         try {
             refreshState();
             if (activeCinematic == null) {
-                return CinematicActionResult.failure("No hay una cinemática en ejecución.");
+                return CinematicActionResult.failureKey("cinematic.stop.not_running", "No hay una cinemática en ejecución.");
             }
             timelinePlayer.clearActiveScenes();
             timelinePlayer.resume();
@@ -163,7 +163,7 @@ public final class DemoCinematicOrchestrator implements CinematicService {
                 rigManager.endAllSessions();
             }
             logger.info("Se detuvo la cinemática activa.");
-            return CinematicActionResult.success("Cinemática detenida.");
+            return CinematicActionResult.successKey("cinematic.stop.stopped", "Cinemática detenida.");
         } finally {
             stateLock.unlock();
         }
@@ -175,15 +175,15 @@ public final class DemoCinematicOrchestrator implements CinematicService {
         try {
             refreshState();
             if (activeCinematic == null) {
-                return CinematicActionResult.failure("No hay una cinemática en ejecución para pausar.");
+                return CinematicActionResult.failureKey("cinematic.pause.not_running", "No hay una cinemática en ejecución para pausar.");
             }
             if (activeCinematic.paused()) {
-                return CinematicActionResult.failure("La cinemática ya está en pausa.");
+                return CinematicActionResult.failureKey("cinematic.pause.already_paused", "La cinemática ya está en pausa.");
             }
             timelinePlayer.pause();
             activeCinematic = activeCinematic.withPaused(true);
             logger.info("Se pausó la cinemática activa.");
-            return CinematicActionResult.success("Cinemática pausada.");
+            return CinematicActionResult.successKey("cinematic.pause.paused", "Cinemática pausada.");
         } finally {
             stateLock.unlock();
         }
@@ -195,15 +195,15 @@ public final class DemoCinematicOrchestrator implements CinematicService {
         try {
             refreshState();
             if (activeCinematic == null) {
-                return CinematicActionResult.failure("No hay una cinemática en ejecución para reanudar.");
+                return CinematicActionResult.failureKey("cinematic.resume.not_running", "No hay una cinemática en ejecución para reanudar.");
             }
             if (!activeCinematic.paused()) {
-                return CinematicActionResult.failure("La cinemática no está en pausa.");
+                return CinematicActionResult.failureKey("cinematic.resume.not_paused", "La cinemática no está en pausa.");
             }
             timelinePlayer.resume();
             activeCinematic = activeCinematic.withPaused(false);
             logger.info("Se reanudó la cinemática activa.");
-            return CinematicActionResult.success("Cinemática reanudada.");
+            return CinematicActionResult.successKey("cinematic.resume.resumed", "Cinemática reanudada.");
         } finally {
             stateLock.unlock();
         }
@@ -215,11 +215,11 @@ public final class DemoCinematicOrchestrator implements CinematicService {
         try {
             refreshState();
             if (activeCinematic != null) {
-                return CinematicActionResult.failure("No se puede recargar mientras hay una cinemática activa.");
+                return CinematicActionResult.failureKey("cinematic.reload.active_running", "No se puede recargar mientras hay una cinemática activa.");
             }
             int loaded = sceneLoader.reloadAll();
             logger.info("Se recargaron " + loaded + " cinemáticas del plugin.");
-            return CinematicActionResult.success("Recarga completada. Cinemáticas cargadas: " + loaded + ".");
+            return CinematicActionResult.successKey("cinematic.reload.success", Map.of("count", loaded), "Recarga completada. Cinemáticas cargadas: " + loaded + ".");
         } finally {
             stateLock.unlock();
         }

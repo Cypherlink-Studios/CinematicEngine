@@ -7,7 +7,7 @@ sidebar:
 
 # Comandos y Permisos
 
-CinematicEngine dispone de un sistema de comandos robusto e intuitivo gestionado por `CommandManager`. Todos los subcomandos cuentan con autocompletado contextual por pestañas (Tab-Completion) y mensajes de retroalimentación claros.
+CinematicEngine dispone de un sistema de comandos robusto e intuitivo gestionado por `CommandManager`. Todos los subcomandos cuentan con autocompletado contextual por pestañas (Tab-Completion), soporte multilenguaje (i18n) y mensajes de retroalimentación enriquecidos mediante **Adventure MiniMessage**.
 
 ---
 
@@ -87,7 +87,7 @@ Muestra el catálogo de todas las escenas cinemáticas registradas y validadas, 
 ---
 
 ### 6. `/cine reload`
-Recarga todos los archivos YAML de escenas desde el disco y actualiza los registros internos sin necesidad de reiniciar el servidor. Valida cada escena con `SceneDtoValidator` e informa de cualquier error en la consola.
+Recarga todos los archivos YAML de escenas y los paquetes de idioma (`locales/messages_*.yml`) desde el disco, actualizando los registros internos y mensajes sin necesidad de reiniciar el servidor. Valida cada escena con `SceneDtoValidator` e informa de cualquier error en la consola.
 
 - **Permiso**: `cinematic.reload` (Por defecto: `op`)
 - **Ejemplo**:
@@ -105,6 +105,16 @@ Muestra el menú de ayuda interactivo con la lista de subcomandos, descripciones
   ```text
   /cine help
   ```
+
+---
+
+## 🎨 Formato y Retroalimentación (i18n)
+
+Todas las respuestas a comandos, avisos de error y notificaciones de éxito se procesan mediante el servicio de internacionalización (`MessageService`) utilizando **Adventure MiniMessage**:
+
+- **Placeholders Dinámicos**: Los mensajes pueden incluir variables contextuales reemplazadas automáticamente, tales como `<subcommand>`, `<label>`, `<permission>`, `<name>`, y `<count>`.
+- **Estilos Visuales**: Admite gradientes (`<gradient:#ffaa00:#ff5555>`), colores hexadecimales (`<#55ffff>`) y decoraciones como `<bold>` o `<italic>`.
+- **Personalización Total**: Para alterar cualquier texto o color, edita los archivos correspondientes en la carpeta `plugins/CinematicEngine/locales/` y aplica los cambios con `/cine reload`.
 
 ---
 

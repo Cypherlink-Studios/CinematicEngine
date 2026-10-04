@@ -1,0 +1,64 @@
+prefix: "<gray>[<gold>CinematicEngine<gray>]</gold></gray> "
+
+command:
+  error:
+    unknown_subcommand: "<red>Subcomando desconocido: <yellow><subcommand></yellow>.</red>"
+    no_permission: "<red>No tienes permiso para usar este comando. Permiso: <yellow><permission></yellow></red>"
+    internal_error: "<red>Ocurrió un error interno al ejecutar el comando.</red>"
+    invalid_syntax: "<red>Sintaxis inválida. Uso correcto: <yellow>/<label> <usage></yellow></red>"
+  help:
+    hint: "<gray>Usa <yellow>/<label> help</yellow> para ver los comandos disponibles.</gray>"
+    header: "<gold>Comandos disponibles:</gold>"
+    format: "<yellow>/cine <usage></yellow> <dark_gray>-</dark_gray> <gray><description></gray>"
+    not_found: "<red>No existe ayuda para '<yellow><subcommand></yellow>'.</red>"
+    no_permission: "<red>No tienes permiso para ver esta ayuda.</red>"
+    detail:
+      usage: "<gray>Uso: <yellow>/cine <usage></yellow></gray>"
+      description: "<gray>Descripción: <white><description></white></gray>"
+      permission: "<gray>Permiso: <aqua><permission></aqua></gray>"
+  subcommand:
+    help:
+      description: "Muestra ayuda general o detallada de un subcomando."
+      usage: "help [subcomando]"
+      success_general: "<green>Ayuda mostrada.</green>"
+      success_detail: "<green>Ayuda de subcomando mostrada.</green>"
+    list:
+      description: "Muestra todas las cinemáticas disponibles."
+      usage: "list"
+      empty: "<yellow>No hay cinemáticas disponibles.</yellow>"
+      success: "<gray>Cinemáticas disponibles: <yellow><cinematics></yellow></gray>"
+    play:
+      description: "Inicia una cinemática por nombre."
+      usage: "play <nombre>"
+    pause:
+      description: "Pausa la cinemática actual."
+      usage: "pause"
+    resume:
+      description: "Reanuda una cinemática pausada."
+      usage: "resume"
+    stop:
+      description: "Detiene la cinemática actual."
+      usage: "stop"
+    reload:
+      description: "Recarga las cinemáticas del plugin."
+      usage: "reload"
+
+cinematic:
+  play:
+    not_found: "<red>La cinemática '<yellow><name></yellow>' no existe.</red>"
+    already_running: "<red>Ya hay una cinemática en ejecución.</red>"
+    started: "<green>Cinemática '<yellow><name></yellow>' iniciada.</green>"
+  stop:
+    not_running: "<red>No hay una cinemática en ejecución.</red>"
+    stopped: "<green>Cinemática detenida.</green>"
+  pause:
+    not_running: "<red>No hay una cinemática en ejecución para pausar.</red>"
+    already_paused: "<yellow>La cinemática ya está en pausa.</yellow>"
+    paused: "<green>Cinemática pausada.</green>"
+  resume:
+    not_running: "<red>No hay una cinemática en ejecución para reanudar.</red>"
+    not_paused: "<yellow>La cinemática no está en pausa.</yellow>"
+    resumed: "<green>Cinemática reanudada.</green>"
+  reload:
+    active_running: "<red>No se puede recargar mientras hay una cinemática activa.</red>"
+    success: "<green>Recarga completada. Cinemáticas cargadas: <white><count></white>.</green>"
