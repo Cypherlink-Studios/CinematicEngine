@@ -22,6 +22,7 @@ public final class SceneLoader {
     private final SceneParser parser;
     private final SceneMapper mapper;
     private final Map<String, Scene> sceneCache;
+    private final Map<String, SceneDTO> dtoCache;
     private final Map<String, Path> sceneFiles;
 
     public SceneLoader(Path cinematicsDirectory, SceneParser parser, SceneMapper mapper) {
@@ -29,22 +30,27 @@ public final class SceneLoader {
         this.parser = Objects.requireNonNull(parser, "parser");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
         this.sceneCache = new ConcurrentHashMap<>();
+        this.dtoCache = new ConcurrentHashMap<>();
         this.sceneFiles = new ConcurrentHashMap<>();
     }
 
     public synchronized int reloadAll() {
         ensureDirectory();
         Map<String, Scene> loadedScenes = new HashMap<>();
+        Map<String, SceneDTO> loadedDtos = new HashMap<>();
         Map<String, Path> filesById = new HashMap<>();
         for (Path file : discoverYamlFiles()) {
             SceneDTO dto = parser.parse(file);
             Scene scene = mapper.map(dto);
             String normalizedId = normalize(scene.id());
             loadedScenes.put(normalizedId, scene);
+            loadedDtos.put(normalizedId, dto);
             filesById.put(normalizedId, file);
         }
         sceneCache.clear();
         sceneCache.putAll(loadedScenes);
+        dtoCache.clear();
+        dtoCache.putAll(loadedDtos);
         sceneFiles.clear();
         sceneFiles.putAll(filesById);
         return loadedScenes.size();
@@ -63,8 +69,27 @@ public final class SceneLoader {
         SceneDTO dto = parser.parse(file);
         Scene scene = mapper.map(dto);
         sceneCache.put(normalizedId, scene);
+        dtoCache.put(normalizedId, dto);
         sceneFiles.put(normalizedId, file);
         return Optional.of(scene);
+    }
+
+    public synchronized Optional<SceneDTO> loadDto(String id) {
+        String normalizedId = normalize(id);
+        SceneDTO cached = dtoCache.get(normalizedId);
+        if (cached != null) {
+            return Optional.of(cached);
+        }
+        Path file = resolveSceneFile(id);
+        if (file == null) {
+            return Optional.empty();
+        }
+        SceneDTO dto = parser.parse(file);
+        Scene scene = mapper.map(dto);
+        sceneCache.put(normalizedId, scene);
+        dtoCache.put(normalizedId, dto);
+        sceneFiles.put(normalizedId, file);
+        return Optional.of(dto);
     }
 
     public synchronized Set<String> availableSceneIds() {

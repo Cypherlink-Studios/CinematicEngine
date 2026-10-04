@@ -1,16 +1,23 @@
 package com.darkbladedev.cinematic.bootstrap;
 
+import com.darkbladedev.cinematic.adapters.actor.SceneActorSession;
+import com.darkbladedev.cinematic.adapters.actor.SkinCacheService;
 import com.darkbladedev.cinematic.adapters.camera.CameraRigManager;
 import com.darkbladedev.cinematic.adapters.camera.PlayerCameraOutput;
+import com.darkbladedev.cinematic.adapters.camera.ProtocolLibBridge;
 import com.darkbladedev.cinematic.adapters.runtime.ServiceTimelineContext;
 import com.darkbladedev.cinematic.camera.CameraOutput;
+import com.darkbladedev.cinematic.camera.targeting.ActorPositionLookup;
 import com.darkbladedev.cinematic.core.model.Scene;
+import com.darkbladedev.cinematic.dsl.dto.SceneDTO;
 import com.darkbladedev.cinematic.dsl.registry.SceneLoader;
+import com.darkbladedev.cinematic.dsl.runtime.ActorResolver;
 import com.darkbladedev.cinematic.runtime.TimelinePlayer;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -28,17 +35,33 @@ public final class DemoCinematicOrchestrator implements CinematicService {
     private final Logger logger;
     private final ReentrantLock stateLock;
     private final CameraRigManager rigManager;
+    private final SkinCacheService skinCache;
+    private final ProtocolLibBridge protocolLibBridge;
     private volatile ActiveCinematic activeCinematic;
+    private volatile SceneActorSession activeActorSession;
 
     public DemoCinematicOrchestrator(TimelinePlayer timelinePlayer, SceneLoader sceneLoader, Logger logger) {
-        this(timelinePlayer, sceneLoader, logger, null);
+        this(timelinePlayer, sceneLoader, logger, null, null, null);
     }
 
     public DemoCinematicOrchestrator(TimelinePlayer timelinePlayer, SceneLoader sceneLoader, Logger logger, CameraRigManager rigManager) {
+        this(timelinePlayer, sceneLoader, logger, rigManager, null, null);
+    }
+
+    public DemoCinematicOrchestrator(
+            TimelinePlayer timelinePlayer,
+            SceneLoader sceneLoader,
+            Logger logger,
+            CameraRigManager rigManager,
+            SkinCacheService skinCache,
+            ProtocolLibBridge protocolLibBridge
+    ) {
         this.timelinePlayer = Objects.requireNonNull(timelinePlayer, "timelinePlayer");
         this.sceneLoader = Objects.requireNonNull(sceneLoader, "sceneLoader");
         this.logger = Objects.requireNonNull(logger, "logger");
         this.rigManager = rigManager;
+        this.skinCache = skinCache;
+        this.protocolLibBridge = protocolLibBridge;
         this.viewers = ConcurrentHashMap.newKeySet();
         this.cameraOutput = new PlayerCameraOutput(() -> activeViewers(), rigManager);
         this.stateLock = new ReentrantLock();
@@ -46,6 +69,10 @@ public final class DemoCinematicOrchestrator implements CinematicService {
 
     public Optional<CameraRigManager> rigManager() {
         return Optional.ofNullable(rigManager);
+    }
+
+    public Optional<SceneActorSession> activeActorSession() {
+        return Optional.ofNullable(activeActorSession);
     }
 
     public void registerViewer(Player player) {
@@ -56,6 +83,10 @@ public final class DemoCinematicOrchestrator implements CinematicService {
         viewers.remove(player.getUniqueId());
         if (rigManager != null) {
             rigManager.endSession(player.getUniqueId());
+        }
+        if (viewers.isEmpty() && activeActorSession != null) {
+            activeActorSession.cleanup();
+            activeActorSession = null;
         }
     }
 
@@ -76,9 +107,24 @@ public final class DemoCinematicOrchestrator implements CinematicService {
             if (activeCinematic != null) {
                 return CinematicActionResult.failure("Ya hay una cinemática en ejecución.");
             }
+
+            SceneDTO dto = sceneLoader.loadDto(cinematicName).orElse(null);
+            if (dto != null && dto.actors() != null && !dto.actors().isEmpty()) {
+                activeActorSession = new SceneActorSession(dto, () -> activeViewers(), skinCache, protocolLibBridge);
+            } else {
+                activeActorSession = null;
+            }
+
+            Map<Class<?>, Object> services = new HashMap<>();
+            services.put(CameraOutput.class, cameraOutput);
+            if (activeActorSession != null) {
+                services.put(ActorResolver.class, activeActorSession);
+                services.put(ActorPositionLookup.class, activeActorSession);
+            }
+
             timelinePlayer.play(
                     scene,
-                    (currentScene, localTick) -> new ServiceTimelineContext(localTick, Map.of(CameraOutput.class, cameraOutput))
+                    (currentScene, localTick) -> new ServiceTimelineContext(localTick, services)
             );
             activeCinematic = new ActiveCinematic(cinematicName, timelinePlayer.currentTick(), scene.durationTicks(), false);
             logger.info("Se inició la cinemática '" + cinematicName + "'.");
@@ -99,6 +145,10 @@ public final class DemoCinematicOrchestrator implements CinematicService {
             timelinePlayer.clearActiveScenes();
             timelinePlayer.resume();
             activeCinematic = null;
+            if (activeActorSession != null) {
+                activeActorSession.cleanup();
+                activeActorSession = null;
+            }
             if (rigManager != null) {
                 rigManager.endAllSessions();
             }
@@ -207,6 +257,10 @@ public final class DemoCinematicOrchestrator implements CinematicService {
         if (finishedByTime || !timelinePlayer.hasActiveScenes()) {
             activeCinematic = null;
             timelinePlayer.resume();
+            if (activeActorSession != null) {
+                activeActorSession.cleanup();
+                activeActorSession = null;
+            }
             if (rigManager != null) {
                 rigManager.endAllSessions();
             }
@@ -219,6 +273,10 @@ public final class DemoCinematicOrchestrator implements CinematicService {
             if (activeCinematic != null) {
                 timelinePlayer.clearActiveScenes();
                 activeCinematic = null;
+            }
+            if (activeActorSession != null) {
+                activeActorSession.cleanup();
+                activeActorSession = null;
             }
             if (rigManager != null) {
                 rigManager.endAllSessions();

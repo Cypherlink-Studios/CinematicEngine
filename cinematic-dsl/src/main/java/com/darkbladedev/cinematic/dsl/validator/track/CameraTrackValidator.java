@@ -16,6 +16,9 @@ public final class CameraTrackValidator implements TrackValidator {
             if (lookAtObj == null) {
                 lookAtObj = dto.data().get("lookAt");
             }
+            if (lookAtObj == null) {
+                lookAtObj = dto.data().get("look_at");
+            }
             if (lookAtObj instanceof Map<?, ?> lookAtMap) {
                 Object mode = lookAtMap.get("mode");
                 if (mode != null && !"fixed".equalsIgnoreCase(mode.toString().trim())) {

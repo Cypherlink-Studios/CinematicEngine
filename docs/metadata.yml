@@ -32,7 +32,7 @@ versions:
     releaseDate: "2026-10-03"
     reference: "163f160"
     downloadUrl: https://github.com/Cypherlink-Studios/CinematicEngine/releases
-    changelog: Versión inicial con interpolación spline Catmull-Rom, rig de Display entities para cámara fluida, estrategias LookAt dinámicas, DSL declarativo en YAML y control de paquetes de espectador.
+    changelog: Versión inicial con interpolación spline Catmull-Rom, rig de Display entities para cámara fluida, estrategias LookAt dinámicas, puesta en escena de actores (virtuales y clones de espectadores), tracks multicapa de movimiento y acción dramática, y DSL declarativo en YAML.
     minecraft:
       - "1.20.x"
       - "1.21.x"

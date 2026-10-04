@@ -41,7 +41,9 @@ public final class CinematicEnginePlugin extends JavaPlugin {
         getLogger().info("Cinemáticas cargadas: " + loadedCinematics);
 
         CameraRigManager cameraRigManager = new CameraRigManager(this);
-        demoCinematicOrchestrator = new DemoCinematicOrchestrator(timelinePlayer, sceneLoader, getLogger(), cameraRigManager);
+        com.darkbladedev.cinematic.adapters.camera.ProtocolLibBridge protocolLibBridge = new com.darkbladedev.cinematic.adapters.camera.ProtocolLibBridge();
+        com.darkbladedev.cinematic.adapters.actor.SkinCacheService skinCache = new com.darkbladedev.cinematic.adapters.actor.SkinCacheService(getDataFolder().toPath().resolve("skins"));
+        demoCinematicOrchestrator = new DemoCinematicOrchestrator(timelinePlayer, sceneLoader, getLogger(), cameraRigManager, skinCache, protocolLibBridge);
         for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
             demoCinematicOrchestrator.registerViewer(onlinePlayer);
         }

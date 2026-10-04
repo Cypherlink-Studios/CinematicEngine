@@ -1,161 +1,235 @@
 ---
 title: Actores y Efectos Ambientales
-description: Coreografía de jugadores, NPCs, entidades simuladas, ráfagas de partículas y audio espacial en CinematicEngine.
+description: Puesta en escena de actores, tracks multicapa de movimiento y acción, poses, animaciones, partículas y audio espacial.
 sidebar:
   order: 7
 ---
 
 # Actores y Efectos Ambientales
 
-CinematicEngine no se limita a manipular cámaras: incorpora pistas dedicadas para **actores** (personajes y figuras en la escena) y **efectos de entorno** (señales audiovisuales, partículas y sonidos).
+CinematicEngine incorpora un sistema integral de **puesta en escena (staging)** para actores y **efectos de entorno** (partículas y sonidos sincronizados) que operan en perfecta armonía con los sistemas de cámara.
 
 ---
 
-## 🎭 El Sistema de Actores
+## 🎭 Puesta en Escena de Actores (`actors`)
 
-Un **Actor** representa una entidad participante en la secuencia cinematográfica cuya posición, orientación y estado son dirigidos mediante una pista `ActorTrack`.
+A partir de CinematicEngine 1.0, las escenas pueden declarar un elenco de personajes en la cabecera `actors:` del archivo YAML. La orquestación corre a cargo de `SceneActorSession`, que instancia entidades simuladas basadas exclusivamente en paquetes clientes (via ProtocolLib) para evitar ensuciar los chunks del servidor con entidades huérfanas.
 
-### Tipos de Actores Disponibles
+```yaml
+id: "emboscada_nocturna"
+duration: 120
 
-| Clase de Actor | Tipo | Descripción |
+actors:
+  - id: "heroe"
+    type: "self_clone"
+    initial_position: [120.0, 64.0, 50.0]
+    initial_yaw: 0.0
+    initial_equipment:
+      main_hand: "DIAMOND_SWORD"
+      helmet: "IRON_HELMET"
+
+  - id: "asesino"
+    type: "virtual"
+    skin: "ShadowRogue"
+    initial_position: [140.0, 68.0, 65.0]
+    initial_yaw: 180.0
+    initial_equipment:
+      main_hand: "BOW"
+```
+
+### Tipos de Actores Soportados
+
+| Tipo (`type`) | Implementación | Descripción |
 | :--- | :--- | :--- |
-| `PlayerActor` | Jugador Real | Controla al propio espectador o a jugadores presentes en el mundo. |
-| `FakeEntityActor` | Entidad por Paquetes | Entidad virtual ligera enviada por paquetes solo visible para el cliente. |
-| `NPCActor` | Entidad de Servidor / NPC | Entidad persistente de servidor o NPC (compatible con Citizens u otros sistemas). |
+| `virtual` | `VirtualPlayerActor` | Entidad virtual tipo jugador generada por paquetes. Permite skins de Mojang resueltos y cacheados localmente (`SkinCacheService`). |
+| `self_clone` | `VirtualPlayerActor` | Clona dinámicamente la apariencia, skin, armadura y objetos en mano del espectador principal que visualiza la cinemática. |
+| `persistent` | `NPCActor` / `PlayerActor` | Se vincula a una entidad física existente en el mundo (por UUID o nombre) sin destruirla al finalizar. |
 
-### Ejemplo de Pista de Actores en YAML
+---
+
+## 🧩 Modelo de Capacidades Segregadas (`Actor`)
+
+Para evitar arquitecturas monolíticas rígidas, los actores exponen capacidades opcionales:
+
+- **`Movable` (`asMovable()`)**: Controla teletransporte continuo, velocidad, orientación (`yaw`/`pitch`) y posición tridimensional.
+- **`Animatable` (`asAnimatable()`)**: Controla poses del cuerpo (`ActorPose`), animaciones de combate (`ActorAction`) y estados de uso de objetos (`ItemUsageState`).
+- **`Equippable` (`asEquippable()`)**: Controla el cambio de armas y armaduras en tiempo real (`EquipmentSlot`).
+
+Si una pista intenta modificar una capacidad que el actor no posee (por ejemplo, equipar una espada a una entidad no equipable), la pista omite la acción de forma segura sin abortar la cinemática.
+
+---
+
+## 🛤️ Pistas Multicapa de Actores
+
+Para permitir que un personaje camine fluidamente mientras agacha la cabeza, blinda su escudo o cambia de arma en momentos clave, CinematicEngine divide el control del actor en dos pistas independientes:
+
+### 1. Pista de Movimiento Continuo (`actor_motion`)
+
+Evalúa trayectorias espaciales continuas interpolando coordenadas entre keyframes mediante interpolación lineal o splines Catmull-Rom.
 
 ```yaml
 tracks:
-  - type: "actor"
-    id: "guard_patrol"
+  - type: "actor_motion"
+    id: "heroe_carrera"
     data:
-      actor-id: "guard_patrol"
+      actor_id: "heroe"
+      path_mode: "spline"      # "spline" o "linear"
+      heading: "tangent"        # "tangent" calcula el yaw automáticamente según la dirección de avance
     keyframes:
       - tick: 0
-        position: [100.0, 64.0, 50.0]
-        yaw: 0.0
-        pitch: 0.0
-        interpolation: "linear"
-      - tick: 80
-        position: [100.0, 64.0, 70.0]
-        yaw: 0.0
-        pitch: 0.0
-        interpolation: "linear"
-      - tick: 100
-        position: [100.0, 64.0, 70.0]
-        yaw: 90.0
-        pitch: 10.0
-        interpolation: "ease_in_out"
+        position: [120.0, 64.0, 50.0]
+      - tick: 60
+        position: [130.0, 64.0, 58.0]
+      - tick: 120
+        position: [140.0, 64.0, 65.0]
 ```
+
+#### Propiedades de `actor_motion`:
+- `actor_id` (`string`, obligatorio): Identificador del actor declarado en `actors:`.
+- `path_mode` (`string`): Modo de interpolación (`spline` para curvas Catmull-Rom suaves, `linear` para trayectorias rectas).
+- `heading` (`string` o `follow_path: true`): Si se establece en `tangent`, la rotación del cuerpo se alinea automáticamente con la derivada tangencial del vector de velocidad.
 
 ---
 
-## ✨ Pista de Efectos Ambientales (`EffectTrack`)
+### 2. Pista de Acciones y Expresión Dramática (`actor_action`)
 
-La pista `effect` dispara eventos discretos de audio y partículas sincronizados a ticks específicos de la línea temporal. A diferencia de las pistas continuas, los efectos se activan de forma puntual.
+Dispara eventos discretos de pose, animación, uso de objetos y cambio de equipamiento en ticks específicos sin interferir en la trayectoria cinemática continua del actor.
 
-### 1. Efectos de Partículas (`ParticleEffect`)
-Spawnea partículas de Minecraft en el mundo relativas a coordenadas del escenario:
+```yaml
+tracks:
+  - type: "actor_action"
+    id: "heroe_acciones"
+    data:
+      actor_id: "heroe"
+    keyframes:
+      - tick: 0
+        pose: "STANDING"
+      - tick: 45
+        pose: "CROUCHING"
+        item_usage: "BLOCKING"
+      - tick: 70
+        action: "HURT"
+      - tick: 85
+        action: "SWING_MAIN_HAND"
+        equipment:
+          main_hand: "NETHERITE_SWORD"
+```
 
+#### Estados y Animaciones Disponibles:
+
+| Categoría | Propiedad | Valores Disponibles |
+| :--- | :--- | :--- |
+| **Poses** | `pose:` | `STANDING`, `CROUCHING`, `SWIMMING`, `SLEEPING`, `FALL_FLYING`, `SPIN_ATTACK` |
+| **Animaciones** | `action:` | `SWING_MAIN_HAND`, `SWING_OFF_HAND`, `HURT`, `CRITICAL_HIT`, `MAGIC_CRITICAL_HIT` |
+| **Uso de Ítems**| `item_usage:` | `NONE`, `BLOCKING`, `BOW_PULL`, `CROSSBOW_CHARGE`, `EATING`, `DRINKING`, `SPEAR_CHARGE` |
+| **Equipamiento**| `equipment:` | Mapa con claves: `main_hand`, `off_hand`, `helmet`, `chestplate`, `leggings`, `boots` |
+
+---
+
+## ✨ Pista de Efectos Ambientales (`effect`)
+
+La pista `effect` dispara eventos discretos de audio y partículas sincronizados a ticks específicos de la línea temporal:
+
+### 1. Efectos de Partículas
 ```yaml
 tracks:
   - type: "effect"
-    id: "magic_sparkles"
+    id: "chispas_magicas"
     keyframes:
-      - tick: 40
+      - tick: 45
         particle:
           type: "ENCHANTMENT_TABLE"
           count: 50
           offset: [1.0, 1.5, 1.0]
           speed: 0.2
-      - tick: 120
+      - tick: 70
         particle:
           type: "EXPLOSION_LARGE"
           count: 1
           offset: [0.0, 0.0, 0.0]
 ```
 
-#### Parámetros de Partícula:
-- `type` (`string`): Nombre del enum `Particle` de Bukkit (ej. `FIREWORK`, `FLAME`, `SOUL_FIRE_FLAME`, `CAMPFIRE_SIGNAL_SMOKE`).
-- `count` (`integer`): Cantidad de partículas emitidas.
-- `offset` (`[dx, dy, dz]`): Dispersión tridimensional respecto al punto de emisión.
-- `speed` (`float`, opcional): Velocidad de dispersión inicial.
-
----
-
-### 2. Sonidos Posicionales (`SoundEffect`)
-Reproduce pistas sonoras y efectos auditivos con modulación de volumen y tono:
-
+### 2. Sonidos Posicionales
 ```yaml
 tracks:
   - type: "effect"
-    id: "soundtrack"
+    id: "audio_ambiente"
     keyframes:
       - tick: 0
         sound:
           name: "music.credits"
           volume: 0.8
           pitch: 1.0
-      - tick: 120
+      - tick: 70
         sound:
-          name: "entity.generic.explode"
+          name: "entity.player.attack.crit"
           volume: 1.0
-          pitch: 0.9
+          pitch: 1.1
 ```
-
-#### Parámetros de Sonido:
-- `name` (`string`): Clave de sonido o recurso de Minecraft (ej. `entity.ender_dragon.growl`, `ui.toast.challenge_complete`, `music.dragon`).
-- `volume` (`float`): Multiplicador de volumen (`0.0` a `1.0+`).
-- `pitch` (`float`): Frecuencia de tono (`0.5` grave a `2.0` agudo).
 
 ---
 
-## 🎬 Ejemplo de Coreografía Integrada
+## 🎬 Ejemplo Completo de Escena Integrada
 
-Coordinando pistas de cámara, actores y efectos, es posible construir escenas cinematográficas completas:
+El siguiente archivo YAML ilustra la sincronización total: un actor clon del espectador recorre una curva spline con orientación tangente, la cámara lo sigue dinámicamente (`look-at: mode: actor`), y el personaje cambia de postura y empuña su espada en el momento exacto:
 
 ```yaml
-id: "summoning_ritual"
-duration: 100
+id: "duelo_cinematico"
+duration: 80
+
+actors:
+  - id: "guerrero"
+    type: "self_clone"
+    initial_position: [0.0, 64.0, 0.0]
+    initial_yaw: 0.0
+    initial_equipment:
+      main_hand: "IRON_SWORD"
 
 tracks:
-  # La cámara orbita el altar
+  # 1. Cámara siguiendo dinámicamente al actor guerrero
   - type: "camera"
-    id: "cam"
+    id: "camara_orbita"
     data:
-      path-mode: "spline"
-      look-at:
-        mode: "static"
-        target: [0.5, 65.0, 0.5]
+      path_mode: "spline"
+      look_at:
+        mode: "actor"
+        target_actor: "guerrero"
     keyframes:
       - tick: 0
-        position: [10.0, 68.0, 0.0]
-      - tick: 50
-        position: [0.0, 70.0, 10.0]
-      - tick: 100
         position: [-10.0, 68.0, 0.0]
+      - tick: 40
+        position: [-8.0, 67.0, 15.0]
+      - tick: 80
+        position: [-5.0, 66.0, 30.0]
 
-  # El mago realiza el ritual
-  - type: "actor"
-    id: "wizard"
+  # 2. Movimiento suave en spline con cabeceo tangencial automático
+  - type: "actor_motion"
+    id: "guerrero_camino"
+    data:
+      actor_id: "guerrero"
+      path_mode: "spline"
+      heading: "tangent"
     keyframes:
       - tick: 0
-        position: [0.5, 64.0, 0.5]
-        yaw: 180.0
-        pitch: -20.0
+        position: [0.0, 64.0, 0.0]
+      - tick: 40
+        position: [5.0, 64.0, 15.0]
+      - tick: 80
+        position: [12.0, 64.0, 30.0]
 
-  # Clímax con partículas y sonido en el tick 50
-  - type: "effect"
-    id: "fx"
+  # 3. Acciones expresivas discretas
+  - type: "actor_action"
+    id: "guerrero_poses"
+    data:
+      actor_id: "guerrero"
     keyframes:
-      - tick: 50
-        particle:
-          type: "DRAGON_BREATH"
-          count: 100
-          offset: [0.5, 1.0, 0.5]
-        sound:
-          name: "entity.wither.spawn"
-          volume: 1.0
-          pitch: 1.2
+      - tick: 0
+        pose: "STANDING"
+      - tick: 35
+        pose: "CROUCHING"
+        item_usage: "BLOCKING"
+      - tick: 60
+        action: "SWING_MAIN_HAND"
+        equipment:
+          main_hand: "DIAMOND_SWORD"
 ```

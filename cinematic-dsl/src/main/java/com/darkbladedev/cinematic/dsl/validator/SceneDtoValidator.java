@@ -34,11 +34,41 @@ public final class SceneDtoValidator {
             collector.add("La escena debe tener al menos un track.");
             throwValidationIfNeeded(collector);
         }
+        validateActors(dto.actors(), collector);
         List<TrackDTO> tracks = dto.tracks();
         for (int index = 0; index < tracks.size(); index++) {
             validateTrack(tracks.get(index), index, dto.duration(), collector);
         }
         throwValidationIfNeeded(collector);
+    }
+
+    private void validateActors(List<com.darkbladedev.cinematic.dsl.dto.ActorDTO> actors, ValidationCollector collector) {
+        if (actors == null || actors.isEmpty()) {
+            return;
+        }
+        java.util.Set<String> seenIds = new java.util.HashSet<>();
+        for (int i = 0; i < actors.size(); i++) {
+            com.darkbladedev.cinematic.dsl.dto.ActorDTO actor = actors.get(i);
+            if (actor == null) {
+                collector.add("actors[" + i + "] no puede ser nulo.");
+                continue;
+            }
+            if (actor.id() == null || actor.id().isBlank()) {
+                collector.add("actors[" + i + "].id es obligatorio.");
+            } else if (!seenIds.add(actor.id())) {
+                collector.add("actors[" + i + "].id duplicado: '" + actor.id() + "'.");
+            }
+            if (actor.type() == null || actor.type().isBlank()) {
+                collector.add("actors[" + i + "].type es obligatorio.");
+            } else if (!"virtual".equalsIgnoreCase(actor.type())
+                    && !"self_clone".equalsIgnoreCase(actor.type())
+                    && !"persistent".equalsIgnoreCase(actor.type())) {
+                collector.add("actors[" + i + "].type no soportado: '" + actor.type() + "'.");
+            }
+            if (!"persistent".equalsIgnoreCase(actor.type()) && actor.initialPosition() == null) {
+                collector.add("actors[" + i + "].initial_position es obligatorio para actores '" + actor.type() + "'.");
+            }
+        }
     }
 
     private void validateTrack(TrackDTO track, int index, int duration, ValidationCollector collector) {

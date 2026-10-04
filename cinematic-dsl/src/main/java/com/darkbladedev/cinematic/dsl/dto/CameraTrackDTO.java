@@ -21,6 +21,9 @@ public record CameraTrackDTO(
             if (rawMode == null) {
                 rawMode = dto.data().get("pathMode");
             }
+            if (rawMode == null) {
+                rawMode = dto.data().get("path_mode");
+            }
             if (rawMode != null) {
                 try {
                     mode = CameraPathMode.valueOf(rawMode.toString().trim().replace("-", "_").toUpperCase());
@@ -32,6 +35,9 @@ public record CameraTrackDTO(
             Object rawLookAt = dto.data().get("look-at");
             if (rawLookAt == null) {
                 rawLookAt = dto.data().get("lookAt");
+            }
+            if (rawLookAt == null) {
+                rawLookAt = dto.data().get("look_at");
             }
             if (rawLookAt instanceof Map<?, ?> map) {
                 lookAtMap = (Map<String, Object>) map;

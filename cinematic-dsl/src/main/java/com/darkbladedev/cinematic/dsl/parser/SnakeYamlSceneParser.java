@@ -1,8 +1,10 @@
 package com.darkbladedev.cinematic.dsl.parser;
 
+import com.darkbladedev.cinematic.dsl.dto.ActorDTO;
 import com.darkbladedev.cinematic.dsl.dto.KeyframeDTO;
 import com.darkbladedev.cinematic.dsl.dto.SceneDTO;
 import com.darkbladedev.cinematic.dsl.dto.TrackDTO;
+import org.joml.Vector3d;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.SafeConstructor;
@@ -21,6 +23,7 @@ import java.util.Objects;
 public final class SnakeYamlSceneParser implements SceneParser {
     private static final String KEY_ID = "id";
     private static final String KEY_DURATION = "duration";
+    private static final String KEY_ACTORS = "actors";
     private static final String KEY_TRACKS = "tracks";
     private static final String KEY_TYPE = "type";
     private static final String KEY_KEYFRAMES = "keyframes";
@@ -44,23 +47,96 @@ public final class SnakeYamlSceneParser implements SceneParser {
             }
             String id = asString(rootMap.get(KEY_ID), KEY_ID, file);
             int duration = asInt(rootMap.get(KEY_DURATION), KEY_DURATION, file);
+            List<ActorDTO> actors = parseActors(rootMap.get(KEY_ACTORS), file);
             List<TrackDTO> tracks = parseTracks(rootMap.get(KEY_TRACKS), file);
             Map<String, Object> metadata = new LinkedHashMap<>();
             for (Map.Entry<?, ?> entry : rootMap.entrySet()) {
                 if (!(entry.getKey() instanceof String key)) {
                     continue;
                 }
-                if (KEY_ID.equals(key) || KEY_DURATION.equals(key) || KEY_TRACKS.equals(key)) {
+                if (KEY_ID.equals(key) || KEY_DURATION.equals(key) || KEY_TRACKS.equals(key) || KEY_ACTORS.equals(key)) {
                     continue;
                 }
                 metadata.put(key, entry.getValue());
             }
-            return new SceneDTO(id, duration, tracks, metadata);
+            return new SceneDTO(id, duration, actors, tracks, metadata);
         } catch (IOException exception) {
             throw new SceneParseException("No se pudo leer el archivo YAML: " + file, exception);
         } catch (YAMLException exception) {
             throw new SceneParseException("Formato YAML inválido en archivo: " + file, exception);
         }
+    }
+
+    private List<ActorDTO> parseActors(Object rawActors, Path file) {
+        if (rawActors == null) {
+            return List.of();
+        }
+        if (!(rawActors instanceof List<?> rawList)) {
+            throw new SceneParseException("La propiedad 'actors' debe ser una lista en: " + file);
+        }
+        List<ActorDTO> actors = new ArrayList<>(rawList.size());
+        for (int index = 0; index < rawList.size(); index++) {
+            Object rawActor = rawList.get(index);
+            if (!(rawActor instanceof Map<?, ?> actorMap)) {
+                throw new SceneParseException("Actor inválido en índice " + index + " en archivo: " + file);
+            }
+            String actorId = asString(actorMap.get(KEY_ID), "actors[" + index + "].id", file);
+            String type = optionalString(actorMap.get("type"), "actors[" + index + "].type", file);
+            if (type == null) {
+                type = "virtual";
+            }
+            String skin = optionalString(actorMap.get("skin"), "actors[" + index + "].skin", file);
+
+            Object rawPos = actorMap.get("initial_position") != null ? actorMap.get("initial_position") : actorMap.get("position");
+            Vector3d initialPos = parseVector3d(rawPos, "actors[" + index + "].initial_position", file);
+
+            Float initialYaw = parseOptionalFloat(actorMap.get("initial_yaw") != null ? actorMap.get("initial_yaw") : actorMap.get("yaw"));
+            Float initialPitch = parseOptionalFloat(actorMap.get("initial_pitch") != null ? actorMap.get("initial_pitch") : actorMap.get("pitch"));
+
+            Map<String, String> initialEquipment = new LinkedHashMap<>();
+            Object rawEquip = actorMap.get("initial_equipment") != null ? actorMap.get("initial_equipment") : actorMap.get("equipment");
+            if (rawEquip instanceof Map<?, ?> equipMap) {
+                for (Map.Entry<?, ?> entry : equipMap.entrySet()) {
+                    if (entry.getKey() != null && entry.getValue() != null) {
+                        initialEquipment.put(entry.getKey().toString(), entry.getValue().toString());
+                    }
+                }
+            }
+
+            Map<String, Object> data = new LinkedHashMap<>();
+            for (Map.Entry<?, ?> entry : actorMap.entrySet()) {
+                if (entry.getKey() instanceof String k) {
+                    if (!KEY_ID.equals(k) && !"type".equals(k) && !"skin".equals(k)
+                            && !"initial_position".equals(k) && !"position".equals(k)
+                            && !"initial_yaw".equals(k) && !"yaw".equals(k)
+                            && !"initial_pitch".equals(k) && !"pitch".equals(k)
+                            && !"initial_equipment".equals(k) && !"equipment".equals(k)) {
+                        data.put(k, entry.getValue());
+                    }
+                }
+            }
+            actors.add(new ActorDTO(actorId, type, skin, initialPos, initialYaw, initialPitch, initialEquipment, data));
+        }
+        return actors;
+    }
+
+    private Vector3d parseVector3d(Object value, String field, Path file) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof List<?> list && list.size() >= 3) {
+            if (list.get(0) instanceof Number x && list.get(1) instanceof Number y && list.get(2) instanceof Number z) {
+                return new Vector3d(x.doubleValue(), y.doubleValue(), z.doubleValue());
+            }
+        }
+        throw new SceneParseException("Vector3d inválido en '" + field + "' en archivo: " + file);
+    }
+
+    private Float parseOptionalFloat(Object value) {
+        if (value instanceof Number n) {
+            return n.floatValue();
+        }
+        return null;
     }
 
     private List<TrackDTO> parseTracks(Object rawTracks, Path file) {
@@ -84,7 +160,16 @@ public final class SnakeYamlSceneParser implements SceneParser {
                 if (KEY_ID.equals(key) || KEY_TYPE.equals(key) || KEY_KEYFRAMES.equals(key)) {
                     continue;
                 }
-                data.put(key, entry.getValue());
+                if ("data".equalsIgnoreCase(key) && entry.getValue() instanceof Map<?, ?> nestedMap) {
+                    for (Map.Entry<?, ?> nestedEntry : nestedMap.entrySet()) {
+                        if (nestedEntry.getKey() instanceof String nestedKey) {
+                            data.put(nestedKey, nestedEntry.getValue());
+                        }
+                    }
+                    data.put(key, entry.getValue());
+                } else {
+                    data.put(key, entry.getValue());
+                }
             }
             tracks.add(new TrackDTO(trackId, type, data, keyframes));
         }

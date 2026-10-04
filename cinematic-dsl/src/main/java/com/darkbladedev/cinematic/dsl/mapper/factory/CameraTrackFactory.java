@@ -82,10 +82,16 @@ public final class CameraTrackFactory implements TrackFactory {
             case "actor" -> {
                 Object rawActor = lookAtMap.get("target-actor");
                 if (rawActor == null) {
+                    rawActor = lookAtMap.get("target_actor");
+                }
+                if (rawActor == null) {
                     rawActor = lookAtMap.get("targetActor");
                 }
                 if (rawActor == null) {
                     rawActor = lookAtMap.get("actor");
+                }
+                if (rawActor == null) {
+                    rawActor = lookAtMap.get("actor_id");
                 }
                 if (rawActor == null) {
                     rawActor = lookAtMap.get("actorId");
