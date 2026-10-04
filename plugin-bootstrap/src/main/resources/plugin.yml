@@ -2,8 +2,8 @@ name: CinematicEngine
 version: 1.0.0-SNAPSHOT
 main: com.darkbladedev.cinematic.bootstrap.CinematicEnginePlugin
 api-version: "1.20"
-softdepend:
-  - ProtocolLib
+depend:
+  - packetevents
 commands:
   cinematic:
     description: Comando raíz del motor de cinemáticas

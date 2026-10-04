@@ -13,7 +13,7 @@ CinematicEngine incorpora un sistema integral de **puesta en escena (staging)** 
 
 ## 🎭 Puesta en Escena de Actores (`actors`)
 
-A partir de CinematicEngine 1.0, las escenas pueden declarar un elenco de personajes en la cabecera `actors:` del archivo YAML. La orquestación corre a cargo de `SceneActorSession`, que instancia entidades simuladas basadas exclusivamente en paquetes clientes (via ProtocolLib) para evitar ensuciar los chunks del servidor con entidades huérfanas.
+A partir de CinematicEngine 1.0, las escenas pueden declarar un elenco de personajes en la cabecera `actors:` del archivo YAML. La orquestación corre a cargo de `SceneActorSession`, que instancia entidades simuladas basadas exclusivamente en paquetes clientes (mediante PacketEvents 2.14.0) para evitar ensuciar los chunks del servidor con entidades huérfanas.
 
 ```yaml
 id: "emboscada_nocturna"

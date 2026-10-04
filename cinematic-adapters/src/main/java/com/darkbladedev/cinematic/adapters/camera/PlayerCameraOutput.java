@@ -12,24 +12,42 @@ import java.util.function.Supplier;
 public final class PlayerCameraOutput implements CameraOutput {
     private final Supplier<Iterable<Player>> viewersSupplier;
     private final CameraRigManager rigManager;
+    private final CameraMountMode mountMode;
 
     public PlayerCameraOutput(Supplier<Iterable<Player>> viewersSupplier) {
-        this(viewersSupplier, null);
+        this(viewersSupplier, null, null);
     }
 
     public PlayerCameraOutput(Supplier<Iterable<Player>> viewersSupplier, CameraRigManager rigManager) {
+        this(viewersSupplier, rigManager, null);
+    }
+
+    public PlayerCameraOutput(
+            Supplier<Iterable<Player>> viewersSupplier,
+            CameraRigManager rigManager,
+            CameraMountMode mountMode
+    ) {
         this.viewersSupplier = Objects.requireNonNull(viewersSupplier, "viewersSupplier");
         this.rigManager = rigManager;
+        this.mountMode = mountMode;
     }
 
     public Optional<CameraRigManager> rigManager() {
         return Optional.ofNullable(rigManager);
     }
 
+    public Optional<CameraMountMode> mountMode() {
+        return Optional.ofNullable(mountMode);
+    }
+
     @Override
     public void apply(CameraState state) {
         if (rigManager != null) {
-            rigManager.apply(viewersSupplier.get(), state);
+            if (mountMode != null) {
+                rigManager.apply(viewersSupplier.get(), state, mountMode);
+            } else {
+                rigManager.apply(viewersSupplier.get(), state);
+            }
             return;
         }
 

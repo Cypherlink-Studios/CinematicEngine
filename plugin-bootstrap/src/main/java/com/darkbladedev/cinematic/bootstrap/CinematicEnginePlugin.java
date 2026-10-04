@@ -39,11 +39,25 @@ public final class CinematicEnginePlugin extends JavaPlugin {
         SceneLoader sceneLoader = new SceneLoader(cinematicDirectory, sceneParser, sceneMapper);
         int loadedCinematics = sceneLoader.reloadAll();
         getLogger().info("Cinemáticas cargadas: " + loadedCinematics);
+        saveDefaultConfig();
+        String mountModeStr = getConfig().getString("camera.mount-mode", "PACKET_VIRTUAL");
+        com.darkbladedev.cinematic.adapters.camera.CameraMountMode mountMode;
+        try {
+            mountMode = com.darkbladedev.cinematic.adapters.camera.CameraMountMode.valueOf(mountModeStr.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            getLogger().warning("Modo de cámara '" + mountModeStr + "' desconocido. Usando PACKET_VIRTUAL.");
+            mountMode = com.darkbladedev.cinematic.adapters.camera.CameraMountMode.PACKET_VIRTUAL;
+        }
 
-        CameraRigManager cameraRigManager = new CameraRigManager(this);
-        com.darkbladedev.cinematic.adapters.camera.ProtocolLibBridge protocolLibBridge = new com.darkbladedev.cinematic.adapters.camera.ProtocolLibBridge();
+        com.darkbladedev.cinematic.adapters.packet.PacketEventsBridge packetEventsBridge = new com.darkbladedev.cinematic.adapters.packet.PacketEventsBridge();
+        if (packetEventsBridge.isAvailable()) {
+            getLogger().info("PacketEvents 2.14.0 detectado e inicializado para actores virtuales y cámara de paquetes.");
+        } else {
+            getLogger().warning("PacketEvents no está activo. Se utilizará modo de cámara de reserva.");
+        }
+        CameraRigManager cameraRigManager = new CameraRigManager(this, mountMode, packetEventsBridge);
         com.darkbladedev.cinematic.adapters.actor.SkinCacheService skinCache = new com.darkbladedev.cinematic.adapters.actor.SkinCacheService(getDataFolder().toPath().resolve("skins"));
-        demoCinematicOrchestrator = new DemoCinematicOrchestrator(timelinePlayer, sceneLoader, getLogger(), cameraRigManager, skinCache, protocolLibBridge);
+        demoCinematicOrchestrator = new DemoCinematicOrchestrator(timelinePlayer, sceneLoader, getLogger(), cameraRigManager, skinCache, packetEventsBridge);
         for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
             demoCinematicOrchestrator.registerViewer(onlinePlayer);
         }

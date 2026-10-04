@@ -1,6 +1,6 @@
 ---
 title: Primeros Pasos con CinematicEngine
-description: Requisitos del sistema, configuración de ProtocolLib y creación de tu primera escena cinemática.
+description: Requisitos del sistema, configuración de PacketEvents y creación de tu primera escena cinemática.
 sidebar:
   order: 2
 ---
@@ -17,16 +17,16 @@ Esta guía te acompañará paso a paso en la instalación de **CinematicEngine**
 | :--- | :--- | :--- |
 | **Software de Servidor** | Paper, Purpur | Paper 1.20.4, 1.20.6 o 1.21.x recomendados. |
 | **Java Runtime** | Java 21+ | Compilado para la máquina virtual Java 21 LTS. |
-| **ProtocolLib** | v5.3.0+ | **Requerido** para los paquetes de cámara de espectador. |
+| **PacketEvents** | v2.14.0+ | **Requerido** para la cámara virtual packet-only, actualizaciones sub-tick y actores virtuales. |
 | **Folia** | No soportado | Utiliza tareas síncronas de Bukkit; regional multithreading no compatible. |
 
 ---
 
 ## 📦 Proceso de Instalación
 
-1. **Instalar ProtocolLib**:
-   - Descarga la versión más reciente de **ProtocolLib** (v5.3.0 o superior) desde su repositorio oficial.
-   - Coloca el archivo `ProtocolLib.jar` en la carpeta `plugins/` de tu servidor.
+1. **Instalar PacketEvents**:
+   - Descarga la versión más reciente de **PacketEvents** (v2.14.0 o superior) desde su [repositorio oficial](https://github.com/retrooper/packetevents).
+   - Coloca el archivo `packetevents-spigot.jar` en la carpeta `plugins/` de tu servidor.
 
 2. **Instalar CinematicEngine**:
    - Descarga `CinematicEngine.jar` desde las [Versiones Oficiales](https://github.com/Cypherlink-Studios/CinematicEngine/releases).
@@ -46,6 +46,21 @@ Esta guía te acompañará paso a paso en la instalación de **CinematicEngine**
      /cine help
      ```
    - Si la instalación fue exitosa, verás el listado de subcomandos disponibles.
+
+---
+
+## ⚙️ Modos de Montaje de Cámara
+
+CinematicEngine incorpora una **Arquitectura de Montaje Dual** configurable en `plugins/CinematicEngine/config.yml`:
+
+```yaml
+camera:
+  # Modo de cámara por defecto: PACKET_VIRTUAL o SERVER_DISPLAY
+  mount-mode: PACKET_VIRTUAL
+```
+
+- **`PACKET_VIRTUAL` (Por Defecto y Prioritario)**: Monta la cámara del espectador directamente a una entidad virtual enviada por paquetes mediante PacketEvents (`WrapperPlayServerCamera`). No genera entidades en el mundo del servidor, no muta los chunks y garantiza transiciones cinemáticas ultrasuaves.
+- **`SERVER_DISPLAY`**: Instancia un rig de `ItemDisplay` con interpolación de transformaciones en el mundo. Indicado para cinemáticas que cruzan grandes distancias a través de chunks no cargados.
 
 ---
 
@@ -132,6 +147,6 @@ tracks:
 
 ## 💡 Consejos y Resolución de Problemas
 
-- **La cámara no se mueve**: Asegúrate de que `ProtocolLib` esté cargado correctamente sin errores en consola.
-- **Movimiento con tirones**: Confirma que el cliente ejecute Minecraft 1.20+. Los Display entity rigs interpolan las transformaciones de forma nativa a la tasa de refresco del monitor.
+- **La cámara no se mueve**: Asegúrate de que `PacketEvents` (2.14.0+) esté cargado correctamente sin errores en consola.
+- **Movimiento con tirones**: Confirma que el cliente ejecute Minecraft 1.20+.
 - **Errores de sintaxis YAML**: Si `/cine reload` arroja advertencias de validación, revisa que las posiciones numéricas tengan el formato `[x, y, z]` y que los ticks sean cronológicamente ordenados.

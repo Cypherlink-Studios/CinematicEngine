@@ -1,6 +1,6 @@
 ---
 title: Getting Started with CinematicEngine
-description: Installation requirements, ProtocolLib configuration, and creating your first cinematic scene.
+description: Installation requirements, PacketEvents configuration, and creating your first cinematic scene.
 sidebar:
   order: 2
 ---
@@ -17,16 +17,16 @@ This guide will walk you through installing **CinematicEngine**, configuring nec
 | :--- | :--- | :--- |
 | **Server Software** | Paper, Purpur | Paper 1.20.4, 1.20.6, or 1.21.x recommended. |
 | **Java Runtime** | Java 21+ | Compiled for Java 21 LTS virtual machine. |
-| **ProtocolLib** | v5.3.0+ | **Required** for Display entity camera spectator packets. |
+| **PacketEvents** | v2.14.0+ | **Required** for packet-only virtual camera mounts, sub-tick motion updates, and actor staging. |
 | **Folia** | Unsupported | Uses Bukkit tick scheduler tasks; regional Folia threading is unsupported. |
 
 ---
 
 ## 📦 Installation Steps
 
-1. **Install ProtocolLib**:
-   - Download the latest build of **ProtocolLib** (v5.3.0 or newer) from its official repository.
-   - Place `ProtocolLib.jar` inside your server's `plugins/` directory.
+1. **Install PacketEvents**:
+   - Download the latest release of **PacketEvents** (v2.14.0 or newer) from its [official repository](https://github.com/retrooper/packetevents).
+   - Place `packetevents-spigot.jar` into your server's `plugins/` directory.
 
 2. **Install CinematicEngine**:
    - Download `CinematicEngine.jar` from the official [Releases](https://github.com/Cypherlink-Studios/CinematicEngine/releases).
@@ -46,6 +46,21 @@ This guide will walk you through installing **CinematicEngine**, configuring nec
      /cine help
      ```
    - If installed correctly, you will see the full list of available CinematicEngine commands.
+
+---
+
+## ⚙️ Camera Mount Modes
+
+CinematicEngine features a **Dual Camera Mount Architecture** configurable in `plugins/CinematicEngine/config.yml`:
+
+```yaml
+camera:
+  # Default camera mount mode: PACKET_VIRTUAL or SERVER_DISPLAY
+  mount-mode: PACKET_VIRTUAL
+```
+
+- **`PACKET_VIRTUAL` (Default & Prioritized)**: Mounts the spectator directly to a clientbound virtual camera entity via PacketEvents (`WrapperPlayServerCamera`). No world entities are spawned, chunk state remains unmutated, and camera pans are butter-smooth.
+- **`SERVER_DISPLAY`**: Spawns an `ItemDisplay` entity with client-side transform interpolation in the Minecraft world. Ideal for long-range scenes spanning distant chunks.
 
 ---
 
@@ -126,12 +141,12 @@ tracks:
    ```text
    /cine stop
    ```
-   Your original location, gamemode, and inventory will be safely restored instantly.
+   Your original location, gamemode, and flight abilities will be safely restored instantly.
 
 ---
 
 ## 💡 Troubleshooting Tips
 
-- **No Camera Movement**: Ensure `ProtocolLib` is enabled and running without errors in your server console.
-- **Jittery View**: Verify that the client is running Minecraft 1.20+ with client rendering enabled. Display entity rigs natively interpolate client frames between server ticks.
-- **YAML Syntax Errors**: If `/cine reload` reports validation errors, check that coordinates are formatted as `[x, y, z]` numeric lists and that ticks are sequential.
+- **No Camera Movement**: Ensure `PacketEvents` (2.14.0+) is enabled and running without errors in your server console.
+- **Jittery View**: Verify that the client is running Minecraft 1.20+ with client rendering enabled.
+- **YAML Syntax Errors**: If `/cine reload` reports validation errors, check that coordinates are formatted as `[x, y, z]` numeric lists and that keyframe ticks are sequential.

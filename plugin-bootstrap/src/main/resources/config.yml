@@ -1,0 +1,10 @@
+# ==========================================================
+# CinematicEngine Configuration
+# ==========================================================
+
+camera:
+  # Default camera mount mode: PACKET_VIRTUAL or SERVER_DISPLAY
+  # PACKET_VIRTUAL: Prioritized packet-only camera via PacketEvents (WrapperPlayServerCamera).
+  #                 Mounts viewers without spawning server entities. Highly recommended.
+  # SERVER_DISPLAY: Server-side Display Entity rig for long-distance cross-chunk streaming.
+  mount-mode: PACKET_VIRTUAL

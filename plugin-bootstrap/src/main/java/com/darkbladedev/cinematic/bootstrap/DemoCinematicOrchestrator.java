@@ -4,7 +4,7 @@ import com.darkbladedev.cinematic.adapters.actor.SceneActorSession;
 import com.darkbladedev.cinematic.adapters.actor.SkinCacheService;
 import com.darkbladedev.cinematic.adapters.camera.CameraRigManager;
 import com.darkbladedev.cinematic.adapters.camera.PlayerCameraOutput;
-import com.darkbladedev.cinematic.adapters.camera.ProtocolLibBridge;
+import com.darkbladedev.cinematic.adapters.packet.PacketEventsBridge;
 import com.darkbladedev.cinematic.adapters.runtime.ServiceTimelineContext;
 import com.darkbladedev.cinematic.camera.CameraOutput;
 import com.darkbladedev.cinematic.camera.targeting.ActorPositionLookup;
@@ -36,7 +36,7 @@ public final class DemoCinematicOrchestrator implements CinematicService {
     private final ReentrantLock stateLock;
     private final CameraRigManager rigManager;
     private final SkinCacheService skinCache;
-    private final ProtocolLibBridge protocolLibBridge;
+    private final PacketEventsBridge packetEventsBridge;
     private volatile ActiveCinematic activeCinematic;
     private volatile SceneActorSession activeActorSession;
 
@@ -54,14 +54,14 @@ public final class DemoCinematicOrchestrator implements CinematicService {
             Logger logger,
             CameraRigManager rigManager,
             SkinCacheService skinCache,
-            ProtocolLibBridge protocolLibBridge
+            PacketEventsBridge packetEventsBridge
     ) {
         this.timelinePlayer = Objects.requireNonNull(timelinePlayer, "timelinePlayer");
         this.sceneLoader = Objects.requireNonNull(sceneLoader, "sceneLoader");
         this.logger = Objects.requireNonNull(logger, "logger");
         this.rigManager = rigManager;
         this.skinCache = skinCache;
-        this.protocolLibBridge = protocolLibBridge;
+        this.packetEventsBridge = packetEventsBridge;
         this.viewers = ConcurrentHashMap.newKeySet();
         this.cameraOutput = new PlayerCameraOutput(() -> activeViewers(), rigManager);
         this.stateLock = new ReentrantLock();
@@ -69,6 +69,16 @@ public final class DemoCinematicOrchestrator implements CinematicService {
 
     public Optional<CameraRigManager> rigManager() {
         return Optional.ofNullable(rigManager);
+    }
+
+    public Optional<com.darkbladedev.cinematic.adapters.camera.CameraMountMode> cameraMountMode() {
+        return rigManager != null ? Optional.of(rigManager.defaultMode()) : Optional.empty();
+    }
+
+    public void setCameraMountMode(com.darkbladedev.cinematic.adapters.camera.CameraMountMode mode) {
+        if (rigManager != null && mode != null) {
+            rigManager.setDefaultMode(mode);
+        }
     }
 
     public Optional<SceneActorSession> activeActorSession() {
@@ -110,7 +120,7 @@ public final class DemoCinematicOrchestrator implements CinematicService {
 
             SceneDTO dto = sceneLoader.loadDto(cinematicName).orElse(null);
             if (dto != null && dto.actors() != null && !dto.actors().isEmpty()) {
-                activeActorSession = new SceneActorSession(dto, () -> activeViewers(), skinCache, protocolLibBridge);
+                activeActorSession = new SceneActorSession(dto, () -> activeViewers(), skinCache, packetEventsBridge);
             } else {
                 activeActorSession = null;
             }

@@ -13,7 +13,7 @@ CinematicEngine incorporates a comprehensive **actor staging** subsystem and **e
 
 ## 🎭 Actor Staging (`actors`)
 
-Starting in CinematicEngine 1.0, scenes can declare an ensemble cast under the `actors:` header in YAML. Actor staging is orchestrated by `SceneActorSession`, which spawns simulated entities purely via clientbound packets (using ProtocolLib) to avoid polluting server world chunks with orphan entities.
+Starting in CinematicEngine 1.0, scenes can declare an ensemble cast under the `actors:` header in YAML. Actor staging is orchestrated by `SceneActorSession`, which spawns simulated entities purely via clientbound packets (using PacketEvents 2.14.0) to avoid polluting server world chunks with orphan entities.
 
 ```yaml
 id: "night_ambush"

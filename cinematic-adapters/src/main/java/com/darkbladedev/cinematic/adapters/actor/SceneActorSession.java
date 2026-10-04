@@ -3,7 +3,7 @@ package com.darkbladedev.cinematic.adapters.actor;
 import com.darkbladedev.cinematic.actors.Actor;
 import com.darkbladedev.cinematic.actors.EquipmentSlot;
 import com.darkbladedev.cinematic.actors.Movable;
-import com.darkbladedev.cinematic.adapters.camera.ProtocolLibBridge;
+import com.darkbladedev.cinematic.adapters.packet.PacketEventsBridge;
 import com.darkbladedev.cinematic.camera.targeting.ActorPositionLookup;
 import com.darkbladedev.cinematic.dsl.dto.ActorDTO;
 import com.darkbladedev.cinematic.dsl.dto.SceneDTO;
@@ -24,7 +24,7 @@ public final class SceneActorSession implements ActorResolver, ActorPositionLook
     private final SceneDTO scene;
     private final Supplier<Iterable<Player>> viewersSupplier;
     private final SkinCacheService skinCache;
-    private final ProtocolLibBridge protocolLibBridge;
+    private final PacketEventsBridge packetEventsBridge;
     private final Map<String, Actor> actors = new ConcurrentHashMap<>();
     private volatile boolean active = true;
 
@@ -32,12 +32,12 @@ public final class SceneActorSession implements ActorResolver, ActorPositionLook
             SceneDTO scene,
             Supplier<Iterable<Player>> viewersSupplier,
             SkinCacheService skinCache,
-            ProtocolLibBridge protocolLibBridge
+            PacketEventsBridge packetEventsBridge
     ) {
         this.scene = Objects.requireNonNull(scene, "scene");
         this.viewersSupplier = Objects.requireNonNull(viewersSupplier, "viewersSupplier");
         this.skinCache = skinCache;
-        this.protocolLibBridge = protocolLibBridge;
+        this.packetEventsBridge = packetEventsBridge;
         initializeActors();
     }
 
@@ -64,7 +64,8 @@ public final class SceneActorSession implements ActorResolver, ActorPositionLook
                         yaw,
                         pitch,
                         viewersSupplier,
-                        protocolLibBridge
+                        packetEventsBridge,
+                        skinCache
                 );
 
                 if (primaryViewer != null && primaryViewer.getInventory() != null) {
@@ -94,7 +95,8 @@ public final class SceneActorSession implements ActorResolver, ActorPositionLook
                         yaw,
                         pitch,
                         viewersSupplier,
-                        protocolLibBridge
+                        packetEventsBridge,
+                        skinCache
                 );
 
                 applyInitialEquipment(virtualActor, dto.initialEquipment());
@@ -110,7 +112,8 @@ public final class SceneActorSession implements ActorResolver, ActorPositionLook
                         yaw,
                         pitch,
                         viewersSupplier,
-                        protocolLibBridge
+                        packetEventsBridge,
+                        skinCache
                 ));
             }
         }

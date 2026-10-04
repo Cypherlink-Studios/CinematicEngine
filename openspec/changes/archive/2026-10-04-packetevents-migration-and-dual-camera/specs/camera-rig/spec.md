@@ -1,20 +1,6 @@
-# camera-rig Specification
+# Spec Delta
 
-## Purpose
-Provides isolated, client-interpolated camera attachment using Paper Display Entities, PacketEvents virtual camera packets, and spectator mode for smooth, judder-free cinematic playback.
-
-## Requirements
-
-### Requirement: Native Display Entity Rig Mounting
-The system SHALL mount viewers to a dedicated camera rig entity in spectator mode configured with sub-tick interpolation.
-
-#### Scenario: Viewer joins cinematic playback
-- **WHEN** cinematic playback begins for a viewer
-- **THEN** the system saves the viewer's current location and gamemode, changes the viewer's gamemode to spectator, and targets a dedicated camera rig entity with teleport duration set for client interpolation.
-
-#### Scenario: Private entity visibility
-- **WHEN** a camera rig entity is spawned for a viewer
-- **THEN** the entity SHALL be hidden from all other players on the server and visible only to the active viewer.
+## ADDED Requirements
 
 ### Requirement: Packet-Only Camera Rig Mounting
 The system SHALL support mounting viewers to a virtual packet-only camera entity using PacketEvents `WrapperPlayServerCamera` without spawning server-side world entities, serving as the prioritized default camera mount strategy.
@@ -26,6 +12,8 @@ The system SHALL support mounting viewers to a virtual packet-only camera entity
 #### Scenario: Sub-tick packet camera motion update
 - **WHEN** the cinematic updates the camera transform on a playback tick in packet-only mode
 - **THEN** the system dispatches clientbound entity teleport packets for the virtual camera entity without mutating or ticking server world entities.
+
+## MODIFIED Requirements
 
 ### Requirement: Viewer State Preservation and Restoration
 The system SHALL restore the viewer to their exact pre-cinematic state upon completion, interruption, or disconnect, cleaning up all active camera mounts regardless of whether the mount mode is packet-only or display-entity based.
@@ -41,10 +29,3 @@ The system SHALL restore the viewer to their exact pre-cinematic state upon comp
 #### Scenario: Viewer disconnects during playback
 - **WHEN** a viewer disconnects while attached to an active camera rig
 - **THEN** the camera rig session is cleaned up and all tracking state is cleared to prevent resource leaks.
-
-### Requirement: Spectator Dismount Prevention
-The system SHALL prevent viewers from detaching from the spectator camera rig before playback finishes.
-
-#### Scenario: Viewer attempts to sneak
-- **WHEN** a viewer attempts to sneak or detach from the spectator target during playback
-- **THEN** the detachment action is cancelled or immediately retargeted to maintain continuous camera lock.

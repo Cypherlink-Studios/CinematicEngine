@@ -1,6 +1,6 @@
 ---
 title: Camera Dynamics and Rigs
-description: In-depth technical guide on Display entity camera rigs, packet smoothing, and dynamic LookAt targeting strategies.
+description: In-depth technical guide on Dual camera mount architecture, PacketEvents packet-only camera, Display entity rigs, and dynamic LookAt targeting strategies.
 sidebar:
   order: 5
 ---
@@ -11,40 +11,49 @@ The camera system in CinematicEngine is designed to solve one of the oldest chal
 
 ---
 
-## 🎥 The Display Entity Camera Rig
+## 🎥 Dual Camera Mount Architecture
 
-### The Problem with Direct Player Teleportation
-Traditional Minecraft cutscene plugins teleport the viewer's `Player` entity tick-by-tick (`player.teleport()`). In Minecraft:
-- The server runs at 20 ticks per second (1 tick = 50ms).
-- Client monitors render at 60, 144, or 240 FPS.
-- Direct player teleportation forces the client to snap between positions every 50ms, producing noticeable micro-stuttering, camera judder, and FOV warping.
-
-### The Solution: Invisible Display Entity Rig
-Introduced in Minecraft 1.19.4 / 1.20, **Display Entities** have native client-side transformation interpolation. CinematicEngine leverages this via `CameraRigManager` and `CameraRigSession`:
+CinematicEngine features a polymorphic **Dual Camera Mount Architecture** managed by `CameraRigManager`:
 
 ```text
-+-------------------------------------------------------------------------+
-|                       CAMERA RIG EXECUTION LIFECYCLE                    |
-+-------------------------------------------------------------------------+
++--------------------------------------------------------------------------+
+|                        DUAL CAMERA RIG STRATEGY                          |
++--------------------------------------------------------------------------+
 
-  1. RIG INITIALIZATION
-     └── Spawns an invisible Display Entity at the scene's starting origin.
-     └── Sets client transformation interpolation duration.
+                           [CameraRigManager]
+                                   |
+             +---------------------+---------------------+
+             | mode = PACKET_VIRTUAL                     | mode = SERVER_DISPLAY
+             v                                           v
+  [PacketCameraRigSession]                     [DisplayCameraRigSession]
+  - PacketEvents 2.14.0                        - Paper ItemDisplay in chunk
+  - Virtual entity spawn packet                - player.setSpectatorTarget()
+  - WrapperPlayServerCamera(virtualId)         - rig.teleport(loc)
+  - WrapperPlayServerEntityTeleport            - Native client interpolation
+  - Reset: WrapperPlayServerCamera(self)       - Restore: rig.remove()
+```
 
-  2. SPECTATOR CAMERA MOUNT
-     └── ProtocolLibBridge constructs a PacketType.Play.Server.CAMERA packet.
-     └── Binds the viewer's client camera to the Display Entity ID.
-     └── The player remains physically secure while visually attached to the rig.
+### 1. `PACKET_VIRTUAL` (Prioritized Default)
+- **Zero Server Entities**: Spawns a clientbound virtual camera entity directly to the viewer's network stream using `WrapperPlayServerSpawnEntity` with `EntityType.ITEM_DISPLAY`.
+- **Spectator Camera Binding**: Sends `WrapperPlayServerCamera(virtualEntityId)` via PacketEvents 2.14.0. The Minecraft client locks its view to the virtual entity without any entity existing in the server world.
+- **Sub-Tick Motion**: Each frame update emits `WrapperPlayServerEntityTeleport`, providing jitter-free motion without mutating or ticking server world chunks.
+- **Clean Detach**: Upon completion or interruption, the engine dispatches `WrapperPlayServerCamera(player.getEntityId())` to snap the viewer's perspective back to their own body, followed by `WrapperPlayServerDestroyEntities`.
 
-  3. SUB-TICK SMOOTH MOVEMENT
-     └── Server updates rig translation & rotation vectors on the tick timeline.
-     └── The client GPU smoothly interpolates position between ticks at monitor FPS.
+### 2. `SERVER_DISPLAY` (Fallback & Long-Range Streaming)
+- **World Entity Rig**: Spawns an invisible Paper `ItemDisplay` into the world with `teleportDuration = 1` for client GPU transformation interpolation.
+- **Cross-Chunk Streaming**: Because a physical entity resides in the server world, Paper handles chunk loading and streaming natively over large distances.
+- **Automatic Fallback**: If PacketEvents is unavailable, `CameraRigManager` automatically falls back to `SERVER_DISPLAY`.
 
-  4. RESTORATION & TEARDOWN
-     └── Re-targets CAMERA packet back to the player's own entity ID.
-     └── Safely removes the temporary Display Entity.
-     └── Restores player gamemode, location, and inventory state.
-+-------------------------------------------------------------------------+
+---
+
+## ⚙️ Configuration
+
+Configure the default mounting strategy in `plugins/CinematicEngine/config.yml`:
+
+```yaml
+camera:
+  # Default mount mode: PACKET_VIRTUAL (recommended) or SERVER_DISPLAY
+  mount-mode: PACKET_VIRTUAL
 ```
 
 ---
@@ -90,9 +99,8 @@ look-at:
 
 ## 🛡️ Spectator Safety and State Protection
 
-During a cinematic, the viewer is switched to spectator mode and attached to the rig. `SpectatorSafetyListener` enforces strict safeguards:
+During a cinematic, the viewer is switched to spectator mode and attached to the rig. `SpectatorSafetyListener` enforces strict safeguards for both modes:
 
-- **Dismount Prevention**: Intercepts sneak/dismount packets so the player cannot accidentally detach from the camera rig.
-- **Interaction Lockdown**: Blocks block breaking, placing, entity interaction, and command execution during playback.
-- **State Serialization**: Saves gamemode, flying status, coordinates, pitch, yaw, and inventory prior to scene start.
-- **Emergency Clean-up**: If a player disconnects, dies, or the server reloads, the listener automatically restores the player's state on rejoin and destroys orphan rigs.
+- **Dismount Prevention**: Intercepts sneak and stop-spectating events (`PlayerToggleSneakEvent`, `PlayerStopSpectatingEntityEvent`). If in `PACKET_VIRTUAL` mode, it automatically re-dispatches `WrapperPlayServerCamera` to keep the client locked.
+- **State Serialization**: Captures original gamemode, flying status, coordinates, pitch, and yaw prior to scene start.
+- **Emergency Clean-up**: If a player disconnects, dies, or the server stops, the engine safely restores the player's original state and destroys virtual or physical camera rigs without leaving orphan entities.

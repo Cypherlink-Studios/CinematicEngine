@@ -3,7 +3,7 @@
 
 [versions]
 paper = "1.20.6-R0.1-SNAPSHOT"
-protocollib = "5.3.0"
+packetevents = "2.14.0"
 joml = "1.10.8"
 junit-jupiter = "5.12.1"
 assertj = "3.27.3"
@@ -11,7 +11,7 @@ snakeyaml = "2.5"
 
 [libraries]
 paper-api = { module = "io.papermc.paper:paper-api", version.ref = "paper" }
-protocollib = { module = "com.comphenix.protocol:ProtocolLib", version.ref = "protocollib" }
+packetevents-spigot = { module = "com.github.retrooper:packetevents-spigot", version.ref = "packetevents" }
 joml = { module = "org.joml:joml", version.ref = "joml" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
 assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }

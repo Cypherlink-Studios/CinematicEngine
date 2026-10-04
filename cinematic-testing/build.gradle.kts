@@ -10,6 +10,7 @@ dependencies {
     testImplementation(project(":cinematic-actors"))
     testImplementation(project(":cinematic-dsl"))
     testCompileOnly(libs.paper.api)
+    testImplementation(libs.packetevents.spigot)
     testImplementation(libs.joml)
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.assertj.core)

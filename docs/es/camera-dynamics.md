@@ -1,6 +1,6 @@
 ---
 title: Dinámica de Cámaras y Rigs
-description: Guía técnica sobre rigs con Display entities, suavizado de paquetes e interpolación dinámica LookAt.
+description: Guía técnica sobre arquitectura dual de cámara, cámara virtual packet-only con PacketEvents, Display entity rigs y seguimiento dinámico LookAt.
 sidebar:
   order: 5
 ---
@@ -11,40 +11,49 @@ El sistema de cámara de CinematicEngine fue concebido para superar una de las m
 
 ---
 
-## 🎥 El Rig de Cámara con Display Entities
+## 🎥 Arquitectura Dual de Montaje de Cámara
 
-### El Problema del Teletransporte Tradicional
-Los plugins clásicos de cinemáticas teletransportan directamente a la entidad `Player` del espectador en cada tick (`player.teleport()`). En Minecraft:
-- El servidor procesa 20 ticks por segundo (1 tick = 50 ms).
-- El monitor del jugador renderiza a 60, 144 o 240 FPS.
-- La teletransportación directa obliga al cliente a saltar bruscamente entre posiciones cada 50 ms, causando micro-stuttering y vibración constante del ángulo de visión.
-
-### La Solución: Display Entity Rig Invisible
-A partir de Minecraft 1.19.4 y 1.20, las **Display Entities** poseen interpolación de transformaciones nativa calculada en la GPU del cliente. CinematicEngine implementa esta técnica mediante `CameraRigManager` y `CameraRigSession`:
+CinematicEngine implementa una **Arquitectura Polimórfica de Montaje Dual** orquestada por `CameraRigManager`:
 
 ```text
-+-------------------------------------------------------------------------+
-|                    CICLO DE EJECUCIÓN DEL RIG DE CÁMARA                 |
-+-------------------------------------------------------------------------+
++--------------------------------------------------------------------------+
+|                  ESTRATEGIA DUAL DE RIGS DE CÁMARA                       |
++--------------------------------------------------------------------------+
 
-  1. INICIALIZACIÓN DEL RIG
-     └── Spawnea una Display Entity invisible en el origen de la escena.
-     └── Configura la duración de interpolación de transformaciones en el cliente.
+                           [CameraRigManager]
+                                   |
+             +---------------------+---------------------+
+             | modo = PACKET_VIRTUAL                     | modo = SERVER_DISPLAY
+             v                                           v
+  [PacketCameraRigSession]                     [DisplayCameraRigSession]
+  - PacketEvents 2.14.0                        - ItemDisplay en chunk del mundo
+  - Spawn de entidad virtual por paquetes      - player.setSpectatorTarget()
+  - WrapperPlayServerCamera(virtualId)         - rig.teleport(loc)
+  - WrapperPlayServerEntityTeleport            - Interpolación nativa del cliente
+  - Reset: WrapperPlayServerCamera(self)       - Restauración: rig.remove()
+```
 
-  2. ANCLAJE DE CÁMARA DE ESPECTADOR
-     └── ProtocolLibBridge construye un paquete PacketType.Play.Server.CAMERA.
-     └── Vincula la vista de la cámara del cliente al ID de la Display Entity.
-     └── El jugador permanece protegido mientras su visión sigue al rig.
+### 1. `PACKET_VIRTUAL` (Prioritario y por Defecto)
+- **Cero Entidades en el Servidor**: Genera una entidad virtual en el canal de red del espectador mediante `WrapperPlayServerSpawnEntity` (`EntityType.ITEM_DISPLAY`).
+- **Anclaje de Cámara de Espectador**: Despacha `WrapperPlayServerCamera(virtualEntityId)` vía PacketEvents 2.14.0. El cliente de Minecraft ancla su perspectiva sin que exista ninguna entidad en el mundo del servidor.
+- **Movimiento Sub-Tick**: Cada actualización de fotograma emite `WrapperPlayServerEntityTeleport`, logrando transiciones ultrasuaves a la tasa de refresco del monitor sin sobrecargar el servidor.
+- **Desmonte Limpio**: Al finalizar o cancelarse la escena, envía `WrapperPlayServerCamera(player.getEntityId())` para restaurar la vista al propio avatar del jugador y destruye la entidad virtual con `WrapperPlayServerDestroyEntities`.
 
-  3. MOVIMIENTO FLUIDO A TASA DE REFRESCO DE MONITOR
-     └── El servidor actualiza los vectores de traslación y rotación por tick.
-     └── La GPU del cliente interpola las posiciones entre ticks a los FPS del monitor.
+### 2. `SERVER_DISPLAY` (Reserva y Streaming de Larga Distancia)
+- **Rig Físico en el Mundo**: Spawnea un `ItemDisplay` invisible de Paper en el mundo con `teleportDuration = 1` para interpolación nativa en GPU.
+- **Streaming entre Chunks**: Dado que la entidad reside en el servidor, Paper gestiona de forma nativa la carga y transmisión de chunks a larga distancia.
+- **Fallback Automático**: Si PacketEvents no está disponible en el entorno, `CameraRigManager` conmuta de forma transparente a `SERVER_DISPLAY`.
 
-  4. RESTAURACIÓN Y DESMONTAJE
-     └── Redirige el paquete CAMERA de vuelta a la entidad del propio jugador.
-     └── Elimina de forma segura la Display Entity temporal.
-     └── Restaura modo de juego, posición e inventario original del espectador.
-+-------------------------------------------------------------------------+
+---
+
+## ⚙️ Configuración
+
+Define el modo de montaje predeterminado en `plugins/CinematicEngine/config.yml`:
+
+```yaml
+camera:
+  # Modo de cámara por defecto: PACKET_VIRTUAL (recomendado) o SERVER_DISPLAY
+  mount-mode: PACKET_VIRTUAL
 ```
 
 ---
@@ -90,9 +99,8 @@ look-at:
 
 ## 🛡️ Seguridad del Espectador y Protección de Estado
 
-Durante la cinemática, el espectador entra en modo espectador anclado al rig. La clase `SpectatorSafetyListener` garantiza la integridad del jugador:
+Durante la cinemática, el espectador entra en modo espectador anclado al rig. La clase `SpectatorSafetyListener` garantiza la integridad del jugador en ambos modos:
 
-- **Prevención de Desmonte**: Intercepta paquetes de agacharse/desmontar para evitar que el jugador se libere del rig.
-- **Bloqueo de Interacciones**: Impide romper bloques, golpear entidades y ejecutar comandos no autorizados.
+- **Prevención de Desmonte**: Intercepta eventos de agacharse y dejar de espectar (`PlayerToggleSneakEvent`, `PlayerStopSpectatingEntityEvent`). En modo `PACKET_VIRTUAL`, reenvía `WrapperPlayServerCamera` para mantener el anclaje seguro del cliente.
 - **Serialización de Estado**: Almacena modo de juego, permiso de vuelo, coordenadas, rotación e inventario antes del inicio.
-- **Limpieza de Emergencia**: Ante desconexión o reinicio, restaura al usuario al reingresar y elimina entidades huérfanas.
+- **Limpieza de Emergencia**: Ante desconexión o reinicio, restaura al usuario de inmediato y destruye entidades o paquetes sin dejar rastros huérfanos.

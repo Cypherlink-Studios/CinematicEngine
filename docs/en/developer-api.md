@@ -18,7 +18,7 @@ CinematicEngine exposes a clean, modular Java API allowing third-party plugins t
 repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/")
-    maven("https://repo.dmulloy2.net/repository/public/")
+    maven("https://repo.codemc.io/repository/maven-releases/")
 }
 
 dependencies {
@@ -30,9 +30,9 @@ dependencies {
 
 ### Paper Plugin Descriptor (`paper-plugin.yml` or `plugin.yml`)
 ```yaml
-softdepend:
+depend:
   - CinematicEngine
-  - ProtocolLib
+  - packetevents
 ```
 
 ---

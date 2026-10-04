@@ -1,6 +1,6 @@
 id: cinematicengine
 name: CinematicEngine
-description: Motor modular de secuencias cinemáticas y dinámicas de cámara para Paper y Purpur con rigs de Display entities, interpolación spline Catmull-Rom, seguimiento LookAt dinámico y suavizado de paquetes con ProtocolLib.
+description: Motor modular de secuencias cinemáticas y dinámicas de cámara para Paper y Purpur con arquitectura de montaje dual (cámara packet-only prioritaria mediante PacketEvents 2.14.0 y fallback en Display entities), interpolación spline Catmull-Rom, seguimiento LookAt dinámico y puesta en escena de actores virtuales.
 
 # Plataformas soportadas
 platforms:
@@ -24,10 +24,18 @@ java:
 folia:
   supported: false
   status: unsupported
-  notes: Utiliza sincronización basada en Bukkit tick scheduler y paquetes ProtocolLib sin soporte para Folia regional scheduler.
+  notes: Utiliza sincronización basada en Bukkit tick scheduler y puente de paquetes PacketEvents 2.14.0 sin soporte para Folia regional scheduler.
 
 # Versiones publicadas
 versions:
+  - version: "1.1.0"
+    releaseDate: "2026-10-04"
+    reference: "main"
+    downloadUrl: https://github.com/Cypherlink-Studios/CinematicEngine/releases
+    changelog: Migración completa de ProtocolLib a PacketEvents 2.14.0, ciclo de vida packet-only para actores virtuales y self-clones, y arquitectura de cámara de montaje dual priorizando WrapperPlayServerCamera sin entidades en el mundo.
+    minecraft:
+      - "1.20.x"
+      - "1.21.x"
   - version: "1.0.0"
     releaseDate: "2026-10-03"
     reference: "163f160"
@@ -39,10 +47,11 @@ versions:
 
 # Dependencias del plugin
 dependencies:
-  - id: protocollib
-    name: ProtocolLib
-    type: optional
-    url: https://github.com/dmulloy2/ProtocolLib
+  - id: packetevents
+    name: PacketEvents
+    type: required
+    version: "2.14.0"
+    url: https://github.com/retrooper/packetevents
 
 # Enlaces externos
 links:

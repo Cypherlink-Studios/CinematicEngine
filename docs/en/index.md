@@ -37,8 +37,8 @@ CinematicEngine is built with a strictly decoupled multi-module architecture:
 |                          Catmull-Rom Spline & Linear interpolation          |
 |                                     │                                       |
 |                                     ▼                                       |
-|  [ADAPTERS & SAFETY]     Display Entity Rig (Client-side smooth transforms) |
-|                          ProtocolLibBridge (Spectator CAMERA packets)       |
+|  [ADAPTERS & SAFETY]     Dual Camera Rig (PACKET_VIRTUAL & SERVER_DISPLAY)  |
+|                          PacketEventsBridge (WrapperPlayServerCamera)       |
 |                          SpectatorSafetyListener (State & Inventory restore)|
 |                                     │                                       |
 |                                     ▼                                       |
@@ -53,8 +53,10 @@ CinematicEngine is built with a strictly decoupled multi-module architecture:
 
 ## 🚀 Key Capabilities
 
-### 1. Display Entity Camera Rigs & Packet Smoothing
-Traditional Minecraft cutscene plugins teleport players directly every tick, resulting in visible camera jitter, stuttering motion, and network desync. CinematicEngine mounts the player to an invisible **Display Entity Rig** using ProtocolLib's `PacketType.Play.Server.CAMERA` packets. This leverages Minecraft's native client-side interpolation pipeline for silky-smooth 60+ FPS camera pans.
+### 1. Dual Camera Mount Architecture & PacketEvents 2.14.0
+Traditional Minecraft cutscene plugins teleport players directly every tick, resulting in visible camera jitter, stuttering motion, and network desync. CinematicEngine features a dual mounting system:
+- **`PACKET_VIRTUAL` (Default)**: Employs PacketEvents 2.14.0 `WrapperPlayServerCamera` to lock the spectator's client view to a clientbound virtual entity with zero server-side entities.
+- **`SERVER_DISPLAY`**: Uses world-spawned Paper `ItemDisplay` entities with client GPU transformation interpolation for long-distance cross-chunk streaming.
 
 ### 2. Catmull-Rom Spline Curve Interpolation
 Linear camera motion can feel robotic and abrupt at sharp corners. CinematicEngine features native **Catmull-Rom cubic spline interpolation**, calculating smooth continuous velocity tangents across 3D control points so the camera swoops gracefully through intricate spaces.
@@ -85,10 +87,10 @@ The engine protects viewers throughout their cinematic experience:
 
 ## 📖 Navigating the Documentation
 
-- **[Getting Started](/en/docs/cinematicengine/getting-started/)**: Installation prerequisites, ProtocolLib setup, and building your first cutscene.
+- **[Getting Started](/en/docs/cinematicengine/getting-started/)**: Installation prerequisites, PacketEvents setup, and building your first cutscene.
 - **[Commands & Permissions](/en/docs/cinematicengine/commands-and-permissions/)**: Full reference for `/cinematic` (`/cine`) commands and permission nodes.
 - **[DSL Scenes](/en/docs/cinematicengine/dsl-scenes/)**: YAML scene specification, structure, metadata, and syntax rules.
-- **[Camera Dynamics](/en/docs/cinematicengine/camera-dynamics/)**: Display entity rigs, spectator packets, and LookAt modes.
+- **[Camera Dynamics](/en/docs/cinematicengine/camera-dynamics/)**: Dual camera rigs, PacketEvents spectator packets, and LookAt modes.
 - **[Tracks & Interpolations](/en/docs/cinematicengine/tracks-and-interpolations/)**: Keyframes, splines, ease curves, and multi-track timelines.
 - **[Actors & Effects](/en/docs/cinematicengine/actors-and-effects/)**: Controlling entities, spawning particle effects, and spatial audio.
 - **[Developer API](/en/docs/cinematicengine/developer-api/)**: Java API, `CinematicService`, custom tracks, and runtime extensions.

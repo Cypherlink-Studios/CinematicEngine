@@ -1,76 +1,75 @@
 package com.darkbladedev.cinematic.adapters.camera;
 
+import com.darkbladedev.cinematic.camera.CameraState;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.Player;
 
-import java.util.Objects;
 import java.util.UUID;
 
-public final class CameraRigSession {
-    private final UUID playerId;
-    private final Location originalLocation;
-    private final GameMode originalGameMode;
-    private final boolean originalAllowFlight;
-    private final boolean originalFlying;
-    private Display rigEntity;
+/**
+ * Represents an active viewer camera session in a cinematic playback.
+ */
+public interface CameraRigSession {
 
-    public CameraRigSession(Player player, Display rigEntity) {
-        Objects.requireNonNull(player, "player");
-        this.playerId = player.getUniqueId();
-        this.originalLocation = player.getLocation().clone();
-        this.originalGameMode = player.getGameMode();
-        this.originalAllowFlight = player.getAllowFlight();
-        this.originalFlying = player.isFlying();
-        this.rigEntity = rigEntity;
-    }
+    /**
+     * @return Unique ID of the viewer bound to this session.
+     */
+    UUID playerId();
 
-    public UUID playerId() {
-        return playerId;
-    }
+    /**
+     * @return Player's original world location prior to starting the cinematic.
+     */
+    Location originalLocation();
 
-    public Location originalLocation() {
-        return originalLocation.clone();
-    }
+    /**
+     * @return Player's original GameMode prior to starting the cinematic.
+     */
+    GameMode originalGameMode();
 
-    public GameMode originalGameMode() {
-        return originalGameMode;
-    }
+    /**
+     * @return Whether the player was allowed flight prior to starting the cinematic.
+     */
+    boolean originalAllowFlight();
 
-    public boolean originalAllowFlight() {
-        return originalAllowFlight;
-    }
+    /**
+     * @return Whether the player was actively flying prior to starting the cinematic.
+     */
+    boolean originalFlying();
 
-    public boolean originalFlying() {
-        return originalFlying;
-    }
+    /**
+     * @return Mounting mode employed by this session.
+     */
+    CameraMountMode mountMode();
 
-    public Display rigEntity() {
-        return rigEntity;
-    }
+    /**
+     * Updates the camera transform according to the calculated timeline camera state.
+     *
+     * @param player viewer being updated
+     * @param state  target camera state
+     */
+    void update(Player player, CameraState state);
 
-    public void setRigEntity(Display rigEntity) {
-        this.rigEntity = rigEntity;
-    }
+    /**
+     * Restores the viewer to their original state and cleans up camera rig entities or packets.
+     *
+     * @param player viewer to restore (may be null if player disconnected)
+     */
+    void restore(Player player);
 
-    public void restore(Player player) {
-        if (player != null && player.isOnline()) {
-            if (player.getSpectatorTarget() != null && player.getSpectatorTarget().equals(rigEntity)) {
-                player.setSpectatorTarget(null);
-            }
-            player.setGameMode(originalGameMode);
-            player.setAllowFlight(originalAllowFlight);
-            player.setFlying(originalFlying);
-            player.teleport(originalLocation);
-        }
-        cleanupEntity();
-    }
+    /**
+     * Cleans up entities, packets, or tracking without necessarily restoring player states.
+     */
+    void cleanup();
 
-    public void cleanupEntity() {
-        if (rigEntity != null && rigEntity.isValid()) {
-            rigEntity.remove();
-            rigEntity = null;
-        }
+    /**
+     * Returns the underlying world display entity if running in {@link CameraMountMode#SERVER_DISPLAY},
+     * or null if running in {@link CameraMountMode#PACKET_VIRTUAL}.
+     *
+     * @return display entity or null
+     */
+    default Display rigEntity() {
+        return null;
     }
 }

@@ -1,11 +1,8 @@
 package com.darkbladedev.cinematic.adapters.camera;
 
+import com.darkbladedev.cinematic.adapters.packet.PacketEventsBridge;
 import com.darkbladedev.cinematic.camera.CameraState;
 import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
-import org.bukkit.Location;
-import org.bukkit.entity.Display;
-import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
@@ -15,12 +12,45 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Manages active cinematic camera sessions across viewers, supporting dual mounting strategies:
+ * {@link CameraMountMode#PACKET_VIRTUAL} (prioritized packet-only) and
+ * {@link CameraMountMode#SERVER_DISPLAY} (server-side display entity).
+ */
 public final class CameraRigManager {
     private final Plugin plugin;
+    private final PacketEventsBridge packetBridge;
     private final Map<UUID, CameraRigSession> activeSessions = new ConcurrentHashMap<>();
+    private volatile CameraMountMode defaultMode;
 
     public CameraRigManager(Plugin plugin) {
+        this(plugin, CameraMountMode.PACKET_VIRTUAL, new PacketEventsBridge());
+    }
+
+    public CameraRigManager(Plugin plugin, CameraMountMode defaultMode) {
+        this(plugin, defaultMode, new PacketEventsBridge());
+    }
+
+    public CameraRigManager(Plugin plugin, CameraMountMode defaultMode, PacketEventsBridge packetBridge) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
+        this.defaultMode = Objects.requireNonNull(defaultMode, "defaultMode");
+        this.packetBridge = Objects.requireNonNull(packetBridge, "packetBridge");
+    }
+
+    public CameraMountMode defaultMode() {
+        return defaultMode;
+    }
+
+    public void setDefaultMode(CameraMountMode defaultMode) {
+        this.defaultMode = Objects.requireNonNull(defaultMode, "defaultMode");
+    }
+
+    public PacketEventsBridge packetBridge() {
+        return packetBridge;
+    }
+
+    public Plugin plugin() {
+        return plugin;
     }
 
     public boolean hasSession(UUID playerId) {
@@ -35,15 +65,28 @@ public final class CameraRigManager {
         return activeSessions;
     }
 
+    /**
+     * Applies camera transform using the default mount mode.
+     */
     public void apply(Iterable<Player> viewers, CameraState state) {
+        apply(viewers, state, defaultMode);
+    }
+
+    /**
+     * Applies camera transform specifying an explicit mount mode for this invocation.
+     */
+    public void apply(Iterable<Player> viewers, CameraState state, CameraMountMode mode) {
         Set<UUID> currentViewerIds = ConcurrentHashMap.newKeySet();
         for (Player viewer : viewers) {
             if (viewer == null || !viewer.isOnline() || viewer.isDead()) {
                 continue;
             }
             currentViewerIds.add(viewer.getUniqueId());
-            CameraRigSession session = activeSessions.computeIfAbsent(viewer.getUniqueId(), id -> mountViewer(viewer, state));
-            updateRig(viewer, session, state);
+            CameraRigSession session = activeSessions.computeIfAbsent(
+                    viewer.getUniqueId(),
+                    id -> mountViewer(viewer, state, mode)
+            );
+            session.update(viewer, state);
         }
 
         // Clean up viewers that are no longer in the viewers list
@@ -54,77 +97,38 @@ public final class CameraRigManager {
         }
     }
 
-    private CameraRigSession mountViewer(Player player, CameraState state) {
-        Location initialLocation = new Location(
-                player.getWorld(),
-                state.position().x,
-                state.position().y,
-                state.position().z,
-                state.yaw(),
-                state.pitch()
-        );
-
-        ItemDisplay rigEntity = player.getWorld().spawn(initialLocation, ItemDisplay.class, display -> {
-            display.setVisibleByDefault(false);
-            display.setTeleportDuration(1);
-            display.setGravity(false);
-            display.setInvulnerable(true);
-            display.setPersistent(false);
-        });
-
-        player.showEntity(plugin, rigEntity);
-
-        CameraRigSession session = new CameraRigSession(player, rigEntity);
-        player.setGameMode(GameMode.SPECTATOR);
-        player.setSpectatorTarget(rigEntity);
-        return session;
+    public CameraRigSession mountViewer(Player player, CameraState state) {
+        return mountViewer(player, state, defaultMode);
     }
 
-    private void updateRig(Player player, CameraRigSession session, CameraState state) {
-        Display rig = session.rigEntity();
-        if (rig == null || !rig.isValid()) {
-            Location loc = new Location(
-                    player.getWorld(),
-                    state.position().x,
-                    state.position().y,
-                    state.position().z,
-                    state.yaw(),
-                    state.pitch()
-            );
-            rig = player.getWorld().spawn(loc, ItemDisplay.class, display -> {
-                display.setVisibleByDefault(false);
-                display.setTeleportDuration(1);
-                display.setGravity(false);
-                display.setInvulnerable(true);
-                display.setPersistent(false);
-            });
-            player.showEntity(plugin, rig);
-            session.setRigEntity(rig);
-            player.setSpectatorTarget(rig);
+    public CameraRigSession mountViewer(Player player, CameraState state, CameraMountMode mode) {
+        CameraMountMode effectiveMode = mode != null ? mode : defaultMode;
+
+        if (effectiveMode == CameraMountMode.PACKET_VIRTUAL) {
+            if (packetBridge.isAvailable()) {
+                return new PacketCameraRigSession(player, state, packetBridge);
+            }
+            // Graceful fallback to SERVER_DISPLAY if PacketEvents is not present
+            return new DisplayCameraRigSession(player, state, plugin);
         }
 
-        Location targetLocation = new Location(
-                player.getWorld(),
-                state.position().x,
-                state.position().y,
-                state.position().z,
-                state.yaw(),
-                state.pitch()
-        );
-        rig.teleport(targetLocation);
-
-        if (player.getGameMode() != GameMode.SPECTATOR) {
-            player.setGameMode(GameMode.SPECTATOR);
-        }
-        if (player.getSpectatorTarget() == null || !player.getSpectatorTarget().equals(rig)) {
-            player.setSpectatorTarget(rig);
-        }
+        return new DisplayCameraRigSession(player, state, plugin);
     }
 
     public void endSession(UUID playerId) {
+        Player player = Bukkit.getServer() != null ? Bukkit.getPlayer(playerId) : null;
+        endSession(playerId, player);
+    }
+
+    public void endSession(Player player) {
+        if (player != null) {
+            endSession(player.getUniqueId(), player);
+        }
+    }
+
+    public void endSession(UUID playerId, Player player) {
         CameraRigSession session = activeSessions.remove(playerId);
         if (session != null) {
-            Player player = Bukkit.getPlayer(playerId);
             session.restore(player);
         }
     }

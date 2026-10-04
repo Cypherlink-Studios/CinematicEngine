@@ -6,12 +6,12 @@ subprojects {
     apply(plugin = "java-library")
 
     group = "com.darkbladedev"
-    version = "1.0.0-SNAPSHOT"
+    version = "1.1.0-SNAPSHOT"
 
     repositories {
         mavenCentral()
         maven("https://repo.papermc.io/repository/maven-public/")
-        maven("https://repo.dmulloy2.net/repository/public/")
+        maven("https://repo.codemc.io/repository/maven-releases/")
     }
 
     extensions.configure<org.gradle.api.plugins.JavaPluginExtension> {

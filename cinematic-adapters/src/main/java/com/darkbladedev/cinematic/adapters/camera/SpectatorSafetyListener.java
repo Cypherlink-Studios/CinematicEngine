@@ -10,6 +10,10 @@ import org.bukkit.event.player.PlayerToggleSneakEvent;
 
 import java.util.Objects;
 
+/**
+ * Listener that prevents players in active camera rigs from dismounting or exiting spectator view,
+ * covering both packet-only virtual camera sessions and world display entity sessions.
+ */
 public final class SpectatorSafetyListener implements Listener {
     private final CameraRigManager rigManager;
 
@@ -19,15 +23,25 @@ public final class SpectatorSafetyListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onPlayerToggleSneak(PlayerToggleSneakEvent event) {
-        if (event.isSneaking() && rigManager.hasSession(event.getPlayer().getUniqueId())) {
+        Player player = event.getPlayer();
+        if (event.isSneaking() && rigManager.hasSession(player.getUniqueId())) {
             event.setCancelled(true);
+            CameraRigSession session = rigManager.getSession(player.getUniqueId());
+            if (session instanceof PacketCameraRigSession packetSession) {
+                packetSession.remount(player);
+            }
         }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onPlayerStopSpectating(PlayerStopSpectatingEntityEvent event) {
-        if (rigManager.hasSession(event.getPlayer().getUniqueId())) {
+        Player player = event.getPlayer();
+        if (rigManager.hasSession(player.getUniqueId())) {
             event.setCancelled(true);
+            CameraRigSession session = rigManager.getSession(player.getUniqueId());
+            if (session instanceof PacketCameraRigSession packetSession) {
+                packetSession.remount(player);
+            }
         }
     }
 
@@ -35,7 +49,7 @@ public final class SpectatorSafetyListener implements Listener {
     public void onPlayerQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
         if (rigManager.hasSession(player.getUniqueId())) {
-            rigManager.endSession(player.getUniqueId());
+            rigManager.endSession(player.getUniqueId(), player);
         }
     }
 }
