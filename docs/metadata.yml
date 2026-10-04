@@ -38,7 +38,7 @@ versions:
       - "1.21.x"
   - version: "1.0.0"
     releaseDate: "2026-10-03"
-    reference: "163f160"
+    reference: "196682b"
     downloadUrl: https://github.com/Cypherlink-Studios/CinematicEngine/releases
     changelog: Versión inicial con interpolación spline Catmull-Rom, rig de Display entities para cámara fluida, estrategias LookAt dinámicas, puesta en escena de actores (virtuales y clones de espectadores), tracks multicapa de movimiento y acción dramática, y DSL declarativo en YAML.
     minecraft:
