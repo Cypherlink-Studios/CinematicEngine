@@ -27,6 +27,7 @@ tasks.jar {
             .filter { it.name.endsWith(".jar") }
             .map { zipTree(it) }
     )
+    archiveBaseName.set("CinematicEngine")
 }
 
 tasks.test {

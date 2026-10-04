@@ -30,7 +30,7 @@ folia:
 versions:
   - version: "1.1.0"
     releaseDate: "2026-10-04"
-    reference: "main"
+    reference: "cbdf52a"
     downloadUrl: https://github.com/Cypherlink-Studios/CinematicEngine/releases
     changelog: Migración completa de ProtocolLib a PacketEvents 2.14.0, ciclo de vida packet-only para actores virtuales y self-clones, y arquitectura de cámara de montaje dual priorizando WrapperPlayServerCamera sin entidades en el mundo.
     minecraft:
