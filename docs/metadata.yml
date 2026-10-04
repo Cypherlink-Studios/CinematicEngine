@@ -1,0 +1,57 @@
+id: cinematicengine
+name: CinematicEngine
+description: Motor modular de secuencias cinemáticas y dinámicas de cámara para Paper y Purpur con rigs de Display entities, interpolación spline Catmull-Rom, seguimiento LookAt dinámico y suavizado de paquetes con ProtocolLib.
+
+# Plataformas soportadas
+platforms:
+  - paper
+  - purpur
+
+# Compatibilidad de Minecraft
+minecraft:
+  minimum: "1.20"
+  supported:
+    - "1.20.x"
+    - "1.21.x"
+  tested: "1.20.6"
+
+# Compatibilidad de Java Runtime
+java:
+  minimum: 21
+  recommended: 21
+
+# Soporte para Folia
+folia:
+  supported: false
+  status: unsupported
+  notes: Utiliza sincronización basada en Bukkit tick scheduler y paquetes ProtocolLib sin soporte para Folia regional scheduler.
+
+# Versiones publicadas
+versions:
+  - version: "1.0.0"
+    releaseDate: "2026-10-03"
+    reference: "163f160"
+    downloadUrl: https://github.com/Cypherlink-Studios/CinematicEngine/releases
+    changelog: Versión inicial con interpolación spline Catmull-Rom, rig de Display entities para cámara fluida, estrategias LookAt dinámicas, DSL declarativo en YAML y control de paquetes de espectador.
+    minecraft:
+      - "1.20.x"
+      - "1.21.x"
+
+# Dependencias del plugin
+dependencies:
+  - id: protocollib
+    name: ProtocolLib
+    type: optional
+    url: https://github.com/dmulloy2/ProtocolLib
+
+# Enlaces externos
+links:
+  github: https://github.com/Cypherlink-Studios/CinematicEngine
+
+# Metadatos del motor documental
+documentation:
+  defaultLocale: es
+  locales:
+    - es
+    - en
+  repoPath: docs
